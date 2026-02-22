@@ -1,0 +1,16 @@
+﻿rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /dni/{solicitudId}/{adheridoId}/{archivo} {
+      allow write: if request.auth != null
+        && request.auth.token.rol == "asociado"
+        && archivo.matches('(frente|dorso)\\.jpg')
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow read: if false;
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,19 @@
+﻿{
+  "name": "celta-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["apps/asociado", "apps/empleados", "functions"],
+  "scripts": {
+    "dev:asociado":     "npm -w apps/asociado run dev",
+    "dev:empleados":    "npm -w apps/empleados run dev",
+    "dev:emulators":    "firebase emulators:start",
+    "build:asociado":   "npm -w apps/asociado run build",
+    "build:empleados":  "npm -w apps/empleados run build",
+    "deploy:rules":     "firebase deploy --only firestore:rules,firestore:indexes,storage",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:firebase":  "npm run deploy:rules && npm run deploy:functions"
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.0.0"
+  }
+}

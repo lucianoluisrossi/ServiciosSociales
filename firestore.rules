@@ -1,0 +1,53 @@
+﻿rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esAsociado() {
+      return request.auth != null && request.auth.token.rol == "asociado";
+    }
+    function esEmpleado() {
+      return request.auth != null
+        && request.auth.token.rol in ["empleado", "supervisor"];
+    }
+    function esSupervisor() {
+      return request.auth != null && request.auth.token.rol == "supervisor";
+    }
+    function esPropietario(dni) {
+      return esAsociado() && request.auth.token.dni == dni;
+    }
+
+    match /cuentas_asociados/{dni} {
+      allow read:  if esPropietario(dni) || esEmpleado();
+      allow write: if false;
+    }
+
+    match /solicitudes/{solicitudId} {
+      allow create: if esAsociado()
+        && request.resource.data.titularDni == request.auth.token.dni
+        && request.resource.data.estado == "pendiente"
+        && request.resource.data.revisadoPor == null;
+      allow read: if (esAsociado()
+          && resource.data.titularDni == request.auth.token.dni)
+        || esEmpleado();
+      allow update, delete: if false;
+    }
+
+    match /auditoria/{auditId} {
+      allow read:  if esEmpleado();
+      allow write: if false;
+    }
+
+    match /usuarios_internos/{uid} {
+      allow read:  if request.auth.uid == uid || esSupervisor();
+      allow write: if esSupervisor();
+    }
+
+    match /_otp_temp/{docId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

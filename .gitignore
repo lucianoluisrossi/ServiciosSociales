@@ -1,0 +1,31 @@
+﻿# Dependencias
+node_modules/
+
+# Builds
+apps/asociado/dist/
+apps/empleados/dist/
+functions/lib/
+
+# Variables de entorno â€” NUNCA commitear valores reales
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Credenciales Admin SDK â€” NUNCA commitear
+serviceAccount.json
+*-adminsdk-*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
