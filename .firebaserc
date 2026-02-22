@@ -1,5 +1,7 @@
-﻿{
+{
   "projects": {
-    "default": "celta-pwa"
-  }
+    "default": "serviciossociales-f15f6"
+  },
+  "targets": {},
+  "etags": {}
 }
