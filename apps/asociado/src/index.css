@@ -1,4 +1,4 @@
-﻿*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
   --azul: #1e40af; --azul-claro: #3b82f6; --azul-bg: #eff6ff;
   --rojo: #dc2626; --verde: #16a34a;

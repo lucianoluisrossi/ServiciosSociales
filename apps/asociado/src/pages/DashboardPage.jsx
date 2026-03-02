@@ -1,4 +1,4 @@
-﻿// TODO: implementar DashboardPage
+// TODO: implementar DashboardPage
 // Ver documentaciÃ³n en los artefactos de la conversaciÃ³n
 export default function DashboardPage() {
   return (
