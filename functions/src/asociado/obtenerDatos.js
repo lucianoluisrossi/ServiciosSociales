@@ -41,22 +41,27 @@ exports.obtenerDatosAsociado = onCall(
       throw new HttpsError("internal", "Error al consultar el sistema de CELTA");
     }
 
-    const titular   = data.titular   ?? data;
-    const adheridos = data.adheridos ?? data.familiares ?? [];
+    const registros = data.data ?? [];
+    const titular   = registros.find((r) => r.PareDsc?.trim() === "Titular");
+    const adheridos = registros.filter((r) => r.PareDsc?.trim() !== "Titular");
+
+    if (!titular) {
+      throw new HttpsError("not-found", "No se encontró el titular en los datos");
+    }
 
     return {
       titular: {
-        clicod: titular.clicod ?? titular.CliCod,
-        sumnro: titular.sumnro ?? titular.SumNro,
-        cliape: titular.cliape ?? titular.CliApe,
+        clicod: titular.CliCod,
+        sumnro: titular.SumNro,
+        cliape: titular.CliApe,
       },
       adheridos: adheridos.map((a) => ({
-        id:             a.id ?? a.CliDocNro,
+        id:             a.CliDocNro,
         CliApeContrato: a.CliApeContrato,
-        CliDocNro:      a.CliDocNro,
+        CliDocNro:      String(a.CliDocNro),
         CliFecNac:      a.CliFecNac,
         SumFacFAd:      a.SumFacFAd,
-        PareDsc:        a.PareDsc,
+        PareDsc:        a.PareDsc?.trim(),
       })),
     };
   }
