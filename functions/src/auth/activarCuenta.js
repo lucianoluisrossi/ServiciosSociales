@@ -4,10 +4,7 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 
-// Declarar secretos explícitamente para Functions v2
 const RESEND_API_KEY  = defineSecret("RESEND_API_KEY");
-const WA_PHONE_ID     = defineSecret("WA_PHONE_ID");
-const WA_TOKEN        = defineSecret("WA_TOKEN");
 const API_CELTA_TOKEN = defineSecret("API_CELTA_TOKEN");
 const API_CELTA_URL   = defineSecret("API_CELTA_URL");
 
@@ -18,56 +15,34 @@ const CORS = [
   "http://localhost:5174",
 ];
 
-const SECRETS = [RESEND_API_KEY, WA_PHONE_ID, WA_TOKEN, API_CELTA_TOKEN, API_CELTA_URL];
+const SECRETS = [RESEND_API_KEY, API_CELTA_TOKEN, API_CELTA_URL];
 
 // ─── helpers ────────────────────────────────────────────────────
 
-function enmascararCanal(valor, tipo) {
-  if (tipo === "email") return valor.replace(/(.{2}).+(@.+)/, "$1***$2");
-  return valor.slice(0, -4).replace(/\d/g, "*") + valor.slice(-4);
+function enmascararCanal(valor) {
+  return valor.replace(/(.{2}).+(@.+)/, "$1***$2");
 }
 
-async function enviarOTP(destino, tipo, otp, apellido) {
-  if (tipo === "email") {
-    const resend = new Resend(RESEND_API_KEY.value());
-    await resend.emails.send({
-      from: "CELTA Sepelios <noreply@celta.com.ar>",
-      to: destino,
-      subject: "Código de activación — CELTA Sepelios",
-      html: `
-        <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:2rem">
-          <h2 style="color:#1e40af">CELTA Sepelios</h2>
-          <p>Estimado/a <strong>${apellido}</strong>,</p>
-          <p>Su código de activación es:</p>
-          <div style="font-size:2rem;font-weight:700;letter-spacing:8px;color:#1e40af;padding:1rem;background:#eff6ff;border-radius:8px;text-align:center">
-            ${otp}
-          </div>
-          <p style="color:#6b7280;font-size:.85rem;margin-top:1rem">
-            Válido por 15 minutos. No lo comparta con nadie.
-          </p>
+async function enviarOTP(email, otp, apellido) {
+  const resend = new Resend(RESEND_API_KEY.value());
+  await resend.emails.send({
+    from: "CELTA Sepelios <noreply@celta.com.ar>",
+    to: email,
+    subject: "Código de activación — CELTA Sepelios",
+    html: `
+      <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:2rem">
+        <h2 style="color:#1e40af">CELTA Sepelios</h2>
+        <p>Estimado/a <strong>${apellido}</strong>,</p>
+        <p>Su código de activación es:</p>
+        <div style="font-size:2rem;font-weight:700;letter-spacing:8px;color:#1e40af;padding:1rem;background:#eff6ff;border-radius:8px;text-align:center">
+          ${otp}
         </div>
-      `,
-    });
-  } else {
-    await fetch(
-      `https://graph.facebook.com/v19.0/${WA_PHONE_ID.value()}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${WA_TOKEN.value()}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: destino.replace(/\D/g, ""),
-          type: "text",
-          text: {
-            body: `CELTA: Su código de activación es *${otp}*. Válido 15 minutos. No lo comparta.`,
-          },
-        }),
-      }
-    );
-  }
+        <p style="color:#6b7280;font-size:.85rem;margin-top:1rem">
+          Válido por 15 minutos. No lo comparta con nadie.
+        </p>
+      </div>
+    `,
+  });
 }
 
 // ─── Buscar asociado para activar ───────────────────────────────
@@ -83,7 +58,6 @@ exports.buscarAsociadoParaActivar = onCall(
       throw new HttpsError("invalid-argument", "DNI inválido");
     }
 
-    // Consultar API de CELTA
     let titular;
     try {
       const res = await fetch(
@@ -120,19 +94,18 @@ exports.activarCuenta = onCall(
       throw new HttpsError("permission-denied", "No autorizado");
     }
 
-    const { dni, email, celular, metodo } = data;
+    const { dni, email, metodo } = data;
 
     if (!dni || !/^\d{7,8}$/.test(String(dni))) {
       throw new HttpsError("invalid-argument", "DNI inválido");
     }
-    if (!email && !celular) {
-      throw new HttpsError("invalid-argument", "Se requiere al menos un canal de contacto");
+    if (!email) {
+      throw new HttpsError("invalid-argument", "Se requiere un email para activar la cuenta");
     }
     if (!["presencial", "telefonica", "campania"].includes(metodo)) {
       throw new HttpsError("invalid-argument", "Método de activación inválido");
     }
 
-    // Verificar DNI en API de CELTA
     let titular;
     try {
       const res = await fetch(
@@ -145,15 +118,13 @@ exports.activarCuenta = onCall(
       throw new HttpsError("not-found", "DNI no encontrado en el sistema");
     }
 
-    // Verificar que no tenga cuenta activa
     const cuentaRef = db.collection("cuentas_asociados").doc(String(dni));
     const snap = await cuentaRef.get();
     if (snap.exists && snap.data().estado === "activa") {
       throw new HttpsError("already-exists", "Este asociado ya tiene cuenta activa");
     }
 
-    // Generar OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp     = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
 
     await cuentaRef.set({
@@ -162,8 +133,7 @@ exports.activarCuenta = onCall(
       activadoPor: reqAuth.uid,
       creadoEn: FieldValue.serverTimestamp(),
       canales: {
-        ...(email   && { email:   { valor: email,   verificado: false } }),
-        ...(celular && { celular: { valor: celular, verificado: false } }),
+        email: { valor: email, verificado: false },
       },
       otpActivacion: { hash: otpHash, expira: Date.now() + 15 * 60 * 1000, intentos: 0 },
     });
@@ -178,13 +148,11 @@ exports.activarCuenta = onCall(
       detalle: `Activación iniciada vía ${metodo}`,
     });
 
-    const canalEnvio = email || celular;
-    const tipoCanal  = email ? "email" : "whatsapp";
-    await enviarOTP(canalEnvio, tipoCanal, otp, titular.cliape);
+    await enviarOTP(email, otp, titular.cliape);
 
     return {
       ok: true,
-      canalMask: enmascararCanal(canalEnvio, tipoCanal),
+      canalMask: enmascararCanal(email),
       titular: { cliape: titular.cliape, clicod: titular.clicod },
     };
   }
