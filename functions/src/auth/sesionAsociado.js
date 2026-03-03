@@ -1,8 +1,14 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getAuth } = require("firebase-admin/auth");
 const crypto = require("crypto");
 const { Resend } = require("resend");
+
+// Declarar secretos explícitamente para Functions v2
+const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
+const WA_PHONE_ID   = defineSecret("WA_PHONE_ID");
+const WA_TOKEN      = defineSecret("WA_TOKEN");
 
 const db = getFirestore();
 
@@ -15,7 +21,7 @@ function enmascararCanal(valor, tipo) {
 
 async function enviarOTP(destino, tipo, otp) {
   if (tipo === "email") {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(RESEND_API_KEY.value());
     await resend.emails.send({
       from: "CELTA Sepelios <noreply@celta.com.ar>",
       to: destino,
@@ -37,11 +43,11 @@ async function enviarOTP(destino, tipo, otp) {
   } else {
     // WhatsApp Business API
     await fetch(
-      `https://graph.facebook.com/v19.0/${process.env.WA_PHONE_ID}/messages`,
+      `https://graph.facebook.com/v19.0/${WA_PHONE_ID.value()}/messages`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.WA_TOKEN}`,
+          Authorization: `Bearer ${WA_TOKEN.value()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -61,6 +67,7 @@ async function enviarOTP(destino, tipo, otp) {
 exports.iniciarSesionAsociado = onCall(
   {
     region: "us-east1",
+    secrets: [RESEND_API_KEY, WA_PHONE_ID, WA_TOKEN],
     cors: [
       "https://celta-sepelios.vercel.app",
       "http://localhost:5173",
@@ -87,10 +94,19 @@ exports.iniciarSesionAsociado = onCall(
     const cuenta = snap.data();
 
     // Elegir canal: email primero, WhatsApp como fallback
-    const canal =
-      cuenta.canales?.email?.verificado
-        ? { tipo: "email", valor: cuenta.canales.email.valor }
-        : { tipo: "whatsapp", valor: cuenta.canales.celular.valor };
+    const canales = cuenta.canales ?? {};
+    let canal;
+
+    if (canales.email?.valor) {
+      canal = { tipo: "email", valor: canales.email.valor };
+    } else if (canales.celular?.valor) {
+      canal = { tipo: "whatsapp", valor: canales.celular.valor };
+    } else {
+      throw new HttpsError(
+        "failed-precondition",
+        "No hay canal de contacto registrado. Acercate a nuestras oficinas."
+      );
+    }
 
     // Generar OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -114,6 +130,7 @@ exports.iniciarSesionAsociado = onCall(
 exports.verificarOTPAsociado = onCall(
   {
     region: "us-east1",
+    secrets: [RESEND_API_KEY, WA_PHONE_ID, WA_TOKEN],
     cors: [
       "https://celta-sepelios.vercel.app",
       "http://localhost:5173",
