@@ -20,29 +20,37 @@ exports.obtenerDatosAsociado = onCall(
 
     const { dni } = reqAuth.token;
 
-    let titular, adheridos;
+    let data;
     try {
-      const [resTitular, resAdheridos] = await Promise.all([
-        fetch(`${API_CELTA_URL.value()}/titular?dni=${dni}`, {
+      const res = await fetch(
+        `${API_CELTA_URL.value()}/api/data?cliDocNro=${dni}`,
+        {
           headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` },
-        }),
-        fetch(`${API_CELTA_URL.value()}/adheridos?dni=${dni}`, {
-          headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` },
-        }),
-      ]);
+        }
+      );
 
-      if (!resTitular.ok) throw new Error("Error al obtener titular");
-      titular   = await resTitular.json();
-      adheridos = resAdheridos.ok ? await resAdheridos.json() : [];
-    } catch {
+      if (!res.ok) {
+        const texto = await res.text();
+        console.error("API CELTA error:", res.status, texto);
+        throw new Error(`API respondió ${res.status}`);
+      }
+
+      data = await res.json();
+    } catch (e) {
+      console.error("Error consultando API CELTA:", e.message);
       throw new HttpsError("internal", "Error al consultar el sistema de CELTA");
     }
 
+    // La API devuelve un objeto con titular y array de adheridos
+    // Ajustar según la estructura real que devuelve la API
+    const titular   = data.titular   ?? data;
+    const adheridos = data.adheridos ?? data.familiares ?? [];
+
     return {
       titular: {
-        clicod: titular.clicod,
-        sumnro: titular.sumnro,
-        cliape: titular.cliape,
+        clicod: titular.clicod ?? titular.CliCod,
+        sumnro: titular.sumnro ?? titular.SumNro,
+        cliape: titular.cliape ?? titular.CliApe,
       },
       adheridos: adheridos.map((a) => ({
         id:             a.id ?? a.CliDocNro,

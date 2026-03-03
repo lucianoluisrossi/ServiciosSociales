@@ -1,53 +1,38 @@
-﻿rules_version = '2';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function esAsociado() {
-      return request.auth != null && request.auth.token.rol == "asociado";
-    }
-    function esEmpleado() {
-      return request.auth != null
-        && request.auth.token.rol in ["empleado", "supervisor"];
-    }
-    function esSupervisor() {
-      return request.auth != null && request.auth.token.rol == "supervisor";
-    }
-    function esPropietario(dni) {
-      return esAsociado() && request.auth.token.dni == dni;
-    }
-
+    // Asociado: solo puede leer su propia cuenta
     match /cuentas_asociados/{dni} {
-      allow read:  if esPropietario(dni) || esEmpleado();
-      allow write: if false;
+      allow read: if request.auth != null
+                  && request.auth.token.rol == "asociado"
+                  && request.auth.token.dni == dni;
     }
 
+    // Solicitudes: asociado lee/crea las suyas; empleado lee y actualiza todas
     match /solicitudes/{solicitudId} {
-      allow create: if esAsociado()
-        && request.resource.data.titularDni == request.auth.token.dni
-        && request.resource.data.estado == "pendiente"
-        && request.resource.data.revisadoPor == null;
-      allow read: if (esAsociado()
-          && resource.data.titularDni == request.auth.token.dni)
-        || esEmpleado();
-      allow update, delete: if false;
+      allow read: if request.auth != null
+                  && (
+                    (request.auth.token.rol == "asociado"
+                     && resource.data.titularDni == request.auth.token.dni)
+                    ||
+                    request.auth.token.rol in ["empleado", "supervisor"]
+                  );
+
+      allow create: if request.auth != null
+                    && request.auth.token.rol == "asociado"
+                    && request.resource.data.titularDni == request.auth.token.dni
+                    && request.resource.data.estado == "pendiente";
+
+      allow update: if request.auth != null
+                    && request.auth.token.rol in ["empleado", "supervisor"];
     }
 
-    match /auditoria/{auditId} {
-      allow read:  if esEmpleado();
-      allow write: if false;
+    // Auditoría: solo empleados y supervisores pueden leer
+    match /auditoria/{id} {
+      allow read: if request.auth != null
+                  && request.auth.token.rol in ["empleado", "supervisor"];
     }
 
-    match /usuarios_internos/{uid} {
-      allow read:  if request.auth.uid == uid || esSupervisor();
-      allow write: if esSupervisor();
-    }
-
-    match /_otp_temp/{docId} {
-      allow read, write: if false;
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
   }
 }
