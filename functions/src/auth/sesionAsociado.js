@@ -107,6 +107,7 @@ exports.verificarOTPAsociado = onCall(
     }
 
     const { otpSesion } = snap.data();
+    console.log(`[verificarOTP] dni: ${dni}, otpSesion:`, JSON.stringify(otpSesion));
     if (!otpSesion) {
       throw new HttpsError(
         "failed-precondition",
@@ -129,6 +130,7 @@ exports.verificarOTPAsociado = onCall(
     }
 
     const otpHash = crypto.createHash("sha256").update(String(otp)).digest("hex");
+    console.log(`[verificarOTP] hashRecibido: ${otpHash}, hashGuardado: ${otpSesion.hash}`);
     if (otpHash !== otpSesion.hash) {
       await db.collection("cuentas_asociados").doc(String(dni)).update({
         "otpSesion.intentos": otpSesion.intentos + 1,
