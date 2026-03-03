@@ -13,8 +13,9 @@ const db = getFirestore();
 // ─── helper: enviar OTP por email ───────────────────────────────
 async function enviarOTP(destino, otp) {
   const resend = new Resend(RESEND_API_KEY.value());
-  await resend.emails.send({
-    from: "CELTA Sepelios <noreply@celta.com.ar>",
+  console.log(`[enviarOTP] Intentando enviar a: ${destino}`);
+  const result = await resend.emails.send({
+    from: "onboarding@resend.dev",
     to:   destino,
     subject: "Tu código de acceso — CELTA Sepelios",
     html: `
@@ -31,6 +32,7 @@ async function enviarOTP(destino, otp) {
       </div>
     `,
   });
+  console.log(`[enviarOTP] Resultado Resend:`, JSON.stringify(result));
 }
 
 // ─── PASO 1: Iniciar sesión ──────────────────────────────────────
