@@ -23,14 +23,11 @@ exports.obtenerDatosAsociado = onCall(
     let data;
     try {
       const url = `${API_CELTA_URL.value()}${dni}`;
-      const token = API_CELTA_TOKEN.value();
       console.log("Llamando API CELTA:", url);
-      console.log("Token (primeros 10 chars):", token?.slice(0, 10));
 
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { "x-api-key": API_CELTA_TOKEN.value() },
       });
-
 
       if (!res.ok) {
         const texto = await res.text();
@@ -44,8 +41,6 @@ exports.obtenerDatosAsociado = onCall(
       throw new HttpsError("internal", "Error al consultar el sistema de CELTA");
     }
 
-    // La API devuelve un objeto con titular y array de adheridos
-    // Ajustar según la estructura real que devuelve la API
     const titular   = data.titular   ?? data;
     const adheridos = data.adheridos ?? data.familiares ?? [];
 
