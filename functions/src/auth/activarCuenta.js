@@ -1,9 +1,24 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret }       = require("firebase-functions/params");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 
+// Declarar secretos explícitamente para Functions v2
+const RESEND_API_KEY  = defineSecret("RESEND_API_KEY");
+const WA_PHONE_ID     = defineSecret("WA_PHONE_ID");
+const WA_TOKEN        = defineSecret("WA_TOKEN");
+const API_CELTA_TOKEN = defineSecret("API_CELTA_TOKEN");
+const API_CELTA_URL   = defineSecret("API_CELTA_URL");
+
 const db = getFirestore();
+
+const CORS = [
+  "https://celta-sepelios.vercel.app",
+  "http://localhost:5174",
+];
+
+const SECRETS = [RESEND_API_KEY, WA_PHONE_ID, WA_TOKEN, API_CELTA_TOKEN, API_CELTA_URL];
 
 // ─── helpers ────────────────────────────────────────────────────
 
@@ -14,7 +29,7 @@ function enmascararCanal(valor, tipo) {
 
 async function enviarOTP(destino, tipo, otp, apellido) {
   if (tipo === "email") {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(RESEND_API_KEY.value());
     await resend.emails.send({
       from: "CELTA Sepelios <noreply@celta.com.ar>",
       to: destino,
@@ -35,11 +50,11 @@ async function enviarOTP(destino, tipo, otp, apellido) {
     });
   } else {
     await fetch(
-      `https://graph.facebook.com/v19.0/${process.env.WA_PHONE_ID}/messages`,
+      `https://graph.facebook.com/v19.0/${WA_PHONE_ID.value()}/messages`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.WA_TOKEN}`,
+          Authorization: `Bearer ${WA_TOKEN.value()}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -55,14 +70,9 @@ async function enviarOTP(destino, tipo, otp, apellido) {
   }
 }
 
-const CORS = [
-  "https://celta-sepelios.vercel.app",
-  "http://localhost:5174",
-];
-
 // ─── Buscar asociado para activar ───────────────────────────────
 exports.buscarAsociadoParaActivar = onCall(
-  { region: "us-east1", cors: CORS },
+  { region: "us-east1", cors: CORS, secrets: SECRETS },
   async ({ auth: reqAuth, data }) => {
     if (!reqAuth || !["empleado", "supervisor"].includes(reqAuth.token.rol)) {
       throw new HttpsError("permission-denied", "No autorizado");
@@ -77,8 +87,8 @@ exports.buscarAsociadoParaActivar = onCall(
     let titular;
     try {
       const res = await fetch(
-        `${process.env.API_CELTA_URL}/titular?dni=${dni}`,
-        { headers: { Authorization: `Bearer ${process.env.API_CELTA_TOKEN}` } }
+        `${API_CELTA_URL.value()}/titular?dni=${dni}`,
+        { headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` } }
       );
       if (!res.ok) throw new Error();
       titular = await res.json();
@@ -86,7 +96,6 @@ exports.buscarAsociadoParaActivar = onCall(
       throw new HttpsError("not-found", "DNI no encontrado en el sistema");
     }
 
-    // Estado de cuenta en Firestore
     const snap = await db.collection("cuentas_asociados").doc(String(dni)).get();
     const estadoCuenta = snap.exists ? snap.data().estado : "no_activada";
     const canales = snap.exists ? snap.data().canales : null;
@@ -105,7 +114,7 @@ exports.buscarAsociadoParaActivar = onCall(
 
 // ─── Activar cuenta ──────────────────────────────────────────────
 exports.activarCuenta = onCall(
-  { region: "us-east1", cors: CORS },
+  { region: "us-east1", cors: CORS, secrets: SECRETS },
   async ({ auth: reqAuth, data }) => {
     if (!reqAuth || !["empleado", "supervisor"].includes(reqAuth.token.rol)) {
       throw new HttpsError("permission-denied", "No autorizado");
@@ -127,8 +136,8 @@ exports.activarCuenta = onCall(
     let titular;
     try {
       const res = await fetch(
-        `${process.env.API_CELTA_URL}/titular?dni=${dni}`,
-        { headers: { Authorization: `Bearer ${process.env.API_CELTA_TOKEN}` } }
+        `${API_CELTA_URL.value()}/titular?dni=${dni}`,
+        { headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` } }
       );
       if (!res.ok) throw new Error();
       titular = await res.json();
@@ -159,7 +168,6 @@ exports.activarCuenta = onCall(
       otpActivacion: { hash: otpHash, expira: Date.now() + 15 * 60 * 1000, intentos: 0 },
     });
 
-    // Auditoría
     await db.collection("auditoria").add({
       tipo: "activacion_iniciada",
       dni: String(dni),
@@ -170,7 +178,6 @@ exports.activarCuenta = onCall(
       detalle: `Activación iniciada vía ${metodo}`,
     });
 
-    // Enviar OTP
     const canalEnvio = email || celular;
     const tipoCanal  = email ? "email" : "whatsapp";
     await enviarOTP(canalEnvio, tipoCanal, otp, titular.cliape);
@@ -185,7 +192,7 @@ exports.activarCuenta = onCall(
 
 // ─── Confirmar activación ────────────────────────────────────────
 exports.confirmarActivacion = onCall(
-  { region: "us-east1", cors: CORS },
+  { region: "us-east1", cors: CORS, secrets: SECRETS },
   async ({ auth: reqAuth, data }) => {
     if (!reqAuth || !["empleado", "supervisor"].includes(reqAuth.token.rol)) {
       throw new HttpsError("permission-denied", "No autorizado");
@@ -197,12 +204,12 @@ exports.confirmarActivacion = onCall(
 
     if (!snap.exists) throw new HttpsError("not-found", "Cuenta no encontrada");
 
-    const data_ = snap.data();
-    if (data_.estado !== "pendiente_confirmacion") {
+    const datos = snap.data();
+    if (datos.estado !== "pendiente_confirmacion") {
       throw new HttpsError("failed-precondition", "La cuenta no está pendiente de confirmación");
     }
 
-    const { hash, expira, intentos } = data_.otpActivacion;
+    const { hash, expira, intentos } = datos.otpActivacion;
 
     if (intentos >= 3) {
       await cuentaRef.update({ estado: "bloqueada_otp" });
@@ -218,9 +225,8 @@ exports.confirmarActivacion = onCall(
       throw new HttpsError("unauthenticated", `Código incorrecto. Intentos restantes: ${2 - intentos}`);
     }
 
-    // Activar cuenta
     const canalesVerificados = {};
-    for (const tipo of Object.keys(data_.canales)) {
+    for (const tipo of Object.keys(datos.canales)) {
       canalesVerificados[`canales.${tipo}.verificado`]   = true;
       canalesVerificados[`canales.${tipo}.verificadoEn`] = FieldValue.serverTimestamp();
     }

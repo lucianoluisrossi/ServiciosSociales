@@ -1,8 +1,13 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret }       = require("firebase-functions/params");
+
+const API_CELTA_TOKEN = defineSecret("API_CELTA_TOKEN");
+const API_CELTA_URL   = defineSecret("API_CELTA_URL");
 
 exports.obtenerDatosAsociado = onCall(
   {
-    region: "us-east1",
+    region:  "us-east1",
+    secrets: [API_CELTA_TOKEN, API_CELTA_URL],
     cors: [
       "https://celta-sepelios.vercel.app",
       "http://localhost:5173",
@@ -15,26 +20,24 @@ exports.obtenerDatosAsociado = onCall(
 
     const { dni } = reqAuth.token;
 
-    // Llamar a la API de CELTA (proxy seguro — nunca exponer al frontend)
     let titular, adheridos;
     try {
       const [resTitular, resAdheridos] = await Promise.all([
-        fetch(`${process.env.API_CELTA_URL}/titular?dni=${dni}`, {
-          headers: { Authorization: `Bearer ${process.env.API_CELTA_TOKEN}` },
+        fetch(`${API_CELTA_URL.value()}/titular?dni=${dni}`, {
+          headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` },
         }),
-        fetch(`${process.env.API_CELTA_URL}/adheridos?dni=${dni}`, {
-          headers: { Authorization: `Bearer ${process.env.API_CELTA_TOKEN}` },
+        fetch(`${API_CELTA_URL.value()}/adheridos?dni=${dni}`, {
+          headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` },
         }),
       ]);
 
       if (!resTitular.ok) throw new Error("Error al obtener titular");
       titular   = await resTitular.json();
       adheridos = resAdheridos.ok ? await resAdheridos.json() : [];
-    } catch (e) {
+    } catch {
       throw new HttpsError("internal", "Error al consultar el sistema de CELTA");
     }
 
-    // Devolver solo los campos necesarios
     return {
       titular: {
         clicod: titular.clicod,

@@ -1,16 +1,23 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { defineSecret }      = require("firebase-functions/params");
 const { getFirestore }      = require("firebase-admin/firestore");
 const { Resend }            = require("resend");
+
+const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
+const PANEL_URL      = defineSecret("PANEL_URL");
 
 const db = getFirestore();
 
 exports.notificarNuevaSolicitud = onDocumentCreated(
-  { document: "solicitudes/{solicitudId}", region: "us-east1" },
+  {
+    document: "solicitudes/{solicitudId}",
+    region:   "us-east1",
+    secrets:  [RESEND_API_KEY, PANEL_URL],
+  },
   async (event) => {
     const { titularDni, clicod, sumnro, cambios } = event.data.data();
     const solicitudId = event.params.solicitudId;
 
-    // Obtener empleados activos
     const empleadosSnap = await db
       .collection("usuarios_internos")
       .where("activo", "==", true)
@@ -22,7 +29,6 @@ exports.notificarNuevaSolicitud = onDocumentCreated(
 
     if (emails.length === 0) return;
 
-    // Armar resumen de cambios
     const iconos = { agregar: "➕", editar: "✏️", eliminar: "🗑️" };
     const resumenHTML = cambios
       .map((c) => {
@@ -31,9 +37,9 @@ exports.notificarNuevaSolicitud = onDocumentCreated(
       })
       .join("");
 
-    const panelUrl = process.env.PANEL_URL ?? "https://celta-panel.vercel.app";
+    const panelUrl = PANEL_URL.value() ?? "https://celta-panel.vercel.app";
 
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(RESEND_API_KEY.value());
     await resend.emails.send({
       from:    "Sistema CELTA <sistema@celta.com.ar>",
       to:      emails,
@@ -52,7 +58,7 @@ exports.notificarNuevaSolicitud = onDocumentCreated(
             Ver solicitud en el panel →
           </a>
           <p style="color:#6b7280;font-size:.8rem;margin-top:2rem">
-            Este es un mensaje automático del sistema CELTA.
+            Mensaje automático del sistema CELTA.
           </p>
         </div>
       `,
