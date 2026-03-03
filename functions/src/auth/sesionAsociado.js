@@ -1,3 +1,4 @@
+// v2 — solo email, sin WhatsApp
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret }       = require("firebase-functions/params");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
@@ -49,7 +50,6 @@ exports.iniciarSesionAsociado = onCall(
       throw new HttpsError("invalid-argument", "DNI inválido");
     }
 
-    // Verificar cuenta activa en Firestore
     const snap = await db.collection("cuentas_asociados").doc(String(dni)).get();
 
     if (!snap.exists || snap.data().estado !== "activa") {
@@ -60,11 +60,9 @@ exports.iniciarSesionAsociado = onCall(
       );
     }
 
-    const cuenta  = snap.data();
-    const canales = cuenta.canales ?? {};
-
-    // Obtener email — único canal disponible por ahora
+    const canales = snap.data().canales ?? {};
     const emailValor = canales.email?.valor;
+
     if (!emailValor) {
       throw new HttpsError(
         "failed-precondition",
@@ -72,21 +70,17 @@ exports.iniciarSesionAsociado = onCall(
       );
     }
 
-    // Generar OTP
     const otp     = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
 
-    // Guardar OTP hasheado en Firestore
     await db.collection("cuentas_asociados").doc(String(dni)).update({
       "otpSesion.hash":     otpHash,
       "otpSesion.expira":   Date.now() + 10 * 60 * 1000,
       "otpSesion.intentos": 0,
     });
 
-    // Enviar OTP por email
     await enviarOTP(emailValor, otp);
 
-    // Retornar email enmascarado
     const canalMask = emailValor.replace(/(.{2}).+(@.+)/, "$1***$2");
     return { canalMask };
   }
@@ -144,7 +138,6 @@ exports.verificarOTPAsociado = onCall(
       );
     }
 
-    // OTP correcto — limpiar y emitir Custom Token
     await db.collection("cuentas_asociados").doc(String(dni)).update({
       otpSesion:    FieldValue.delete(),
       ultimoAcceso: FieldValue.serverTimestamp(),
