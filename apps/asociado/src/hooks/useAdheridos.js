@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { getAuth } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 
 export function useAdheridos() {
@@ -11,14 +10,18 @@ export function useAdheridos() {
   const cargar = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setTitular(null);
+    setAdheridos([]);
     try {
       const functions = getFunctions(undefined, "us-east1");
       const obtener = httpsCallable(functions, "obtenerDatosAsociado");
       const result = await obtener();
+      console.log("Respuesta Cloud Function:", result.data);
       const { titular, adheridos } = result.data;
       setTitular(titular);
       setAdheridos(adheridos ?? []);
     } catch (e) {
+      console.error("Error en useAdheridos:", e);
       setError(e.message || "No se pudo obtener la información.");
     } finally {
       setLoading(false);
