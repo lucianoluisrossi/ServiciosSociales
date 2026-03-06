@@ -22,7 +22,7 @@ exports.obtenerDatosAsociado = onCall(
 
     let data;
     try {
-      const url = `${API_CELTA_URL.value()}${dni}`;
+      const url = `${API_CELTA_URL.value()}/api/data?cliDocNro=${dni}`;
       console.log("Llamando API CELTA:", url);
 
       const res = await fetch(url, {
@@ -51,17 +51,20 @@ exports.obtenerDatosAsociado = onCall(
 
     return {
       titular: {
-        clicod: titular.CliCod,
-        sumnro: titular.SumNro,
-        cliape: titular.CliApe,
+        socDocNro: String(titular.SocDocNro),
+        cliCod:    titular.CliCod,
+        sumNro:    titular.SumNro,
+        titNom:    titular.TitNom,
+        cliFecNac: titular.CliFecNac,
+        sumFacFAd: titular.SumFacFAd,
       },
       adheridos: adheridos.map((a) => ({
-        id:             a.CliDocNro,
-        CliApeContrato: a.CliApeContrato,
-        CliDocNro:      String(a.CliDocNro),
-        CliFecNac:      a.CliFecNac,
-        SumFacFAd:      a.SumFacFAd,
-        PareDsc:        a.PareDsc?.trim(),
+        id:        String(a.SocDocNro),   // clave única para React
+        socDocNro: String(a.SocDocNro),
+        socNom:    a.SocNom,
+        cliFecNac: a.CliFecNac,
+        sumFacFAd: a.SumFacFAd,
+        pareDsc:   a.PareDsc?.trim(),
       })),
     };
   }

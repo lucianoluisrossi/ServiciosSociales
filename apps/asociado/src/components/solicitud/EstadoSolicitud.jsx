@@ -50,7 +50,7 @@ export default function EstadoSolicitud({ solicitud }) {
           {solicitud.cambios.map((c, i) => (
             <p key={i} className="text-xs text-gray-600">
               {c.tipo === "agregar" ? "➕" : c.tipo === "eliminar" ? "🗑️" : "✏️"}{" "}
-              {etiquetaTipo(c.tipo)}: {c.datos?.CliApeContrato ?? c.adheridoDni}
+              {etiquetaTipo(c.tipo)}: {c.datos?.socNom ?? c.adheridoDni}
             </p>
           ))}
         </div>

@@ -4,10 +4,13 @@ export default function DatosTitular({ titular }) {
       <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
         Datos del titular
       </h2>
-      <div className="grid grid-cols-3 gap-3">
-        <Dato label="Apellido" value={titular.cliape} />
-        <Dato label="Cód. cliente" value={titular.clicod} />
-        <Dato label="N° servicio" value={titular.sumnro} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Dato label="Razón Social"    value={titular.titNom} />
+        <Dato label="N° Documento"    value={titular.socDocNro} />
+        <Dato label="Cód. Asociado"   value={titular.cliCod} />
+        <Dato label="Cuenta"          value={titular.sumNro} />
+        <Dato label="Fecha Nac."      value={formatFecha(titular.cliFecNac)} />
+        <Dato label="Fecha Adhesión"  value={formatFecha(titular.sumFacFAd)} />
       </div>
     </div>
   );
@@ -20,4 +23,11 @@ function Dato({ label, value }) {
       <p className="text-sm font-medium text-gray-800">{value ?? "—"}</p>
     </div>
   );
+}
+
+function formatFecha(str) {
+  if (!str) return "—";
+  const d = new Date(str);
+  if (isNaN(d)) return str;
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }

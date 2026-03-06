@@ -8,13 +8,13 @@ const PARENTESCOS = [
 
 export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
   const [form, setForm] = useState({
-    CliApeContrato: inicial?.CliApeContrato ?? "",
-    CliDocNro: inicial?.CliDocNro ?? "",
-    CliFecNac: toInputDate(inicial?.CliFecNac),
-    PareDsc: inicial?.PareDsc ?? "",
+    socNom:    inicial?.socNom    ?? "",
+    socDocNro: inicial?.socDocNro ?? "",
+    cliFecNac: toInputDate(inicial?.cliFecNac),
+    pareDsc:   inicial?.pareDsc   ?? "",
   });
   const [fotoFrentePath, setFotoFrentePath] = useState(null);
-  const [fotoDorsoPath, setFotoDorsoPath] = useState(null);
+  const [fotoDorsoPath,  setFotoDorsoPath]  = useState(null);
   const [errores, setErrores] = useState({});
 
   const esEdicion = !!inicial;
@@ -26,11 +26,11 @@ export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
 
   const validar = () => {
     const e = {};
-    if (!form.CliApeContrato.trim()) e.CliApeContrato = "Requerido";
-    if (!form.CliDocNro.trim() || !/^\d{7,8}$/.test(form.CliDocNro.trim()))
-      e.CliDocNro = "DNI inválido (7-8 dígitos)";
-    if (!form.CliFecNac) e.CliFecNac = "Requerida";
-    if (!form.PareDsc) e.PareDsc = "Requerido";
+    if (!form.socNom.trim())    e.socNom = "Requerido";
+    if (!form.socDocNro.trim() || !/^\d{7,8}$/.test(form.socDocNro.trim()))
+      e.socDocNro = "DNI inválido (7-8 dígitos)";
+    if (!form.cliFecNac)        e.cliFecNac = "Requerida";
+    if (!form.pareDsc)          e.pareDsc = "Requerido";
     return e;
   };
 
@@ -38,7 +38,7 @@ export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
     const e = validar();
     if (Object.keys(e).length > 0) { setErrores(e); return; }
     onGuardar(
-      { ...form, CliDocNro: form.CliDocNro.trim() },
+      { ...form, socDocNro: form.socDocNro.trim() },
       fotoFrentePath,
       fotoDorsoPath
     );
@@ -47,40 +47,40 @@ export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
-        <Campo label="Apellido y nombre *" error={errores.CliApeContrato}>
+        <Campo label="Apellido y nombre *" error={errores.socNom}>
           <input
-            className={input(errores.CliApeContrato)}
-            value={form.CliApeContrato}
-            onChange={(e) => set("CliApeContrato", e.target.value)}
+            className={input(errores.socNom)}
+            value={form.socNom}
+            onChange={(e) => set("socNom", e.target.value)}
             placeholder="García Juan"
           />
         </Campo>
 
-        <Campo label="DNI *" error={errores.CliDocNro}>
+        <Campo label="DNI *" error={errores.socDocNro}>
           <input
-            className={input(errores.CliDocNro)}
-            value={form.CliDocNro}
-            onChange={(e) => set("CliDocNro", e.target.value)}
+            className={input(errores.socDocNro)}
+            value={form.socDocNro}
+            onChange={(e) => set("socDocNro", e.target.value)}
             placeholder="12345678"
             disabled={esEdicion}
           />
         </Campo>
 
-        <Campo label="Fecha de nacimiento *" error={errores.CliFecNac}>
+        <Campo label="Fecha de nacimiento *" error={errores.cliFecNac}>
           <input
             type="date"
-            className={input(errores.CliFecNac)}
-            value={form.CliFecNac}
-            onChange={(e) => set("CliFecNac", e.target.value)}
+            className={input(errores.cliFecNac)}
+            value={form.cliFecNac}
+            onChange={(e) => set("cliFecNac", e.target.value)}
             max={today()}
           />
         </Campo>
 
-        <Campo label="Parentesco *" error={errores.PareDsc}>
+        <Campo label="Parentesco *" error={errores.pareDsc}>
           <select
-            className={input(errores.PareDsc)}
-            value={form.PareDsc}
-            onChange={(e) => set("PareDsc", e.target.value)}
+            className={input(errores.pareDsc)}
+            value={form.pareDsc}
+            onChange={(e) => set("pareDsc", e.target.value)}
           >
             <option value="">Seleccionar...</option>
             {PARENTESCOS.map((p) => (
@@ -98,13 +98,13 @@ export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
         <div className="grid grid-cols-2 gap-3">
           <SubirDNI
             label="Frente"
-            dni={form.CliDocNro}
+            dni={form.socDocNro}
             lado="frente"
             onSubido={setFotoFrentePath}
           />
           <SubirDNI
             label="Dorso"
-            dni={form.CliDocNro}
+            dni={form.socDocNro}
             lado="dorso"
             onSubido={setFotoDorsoPath}
           />
@@ -130,7 +130,6 @@ export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
   );
 }
 
-// Helpers
 function input(err) {
   return `w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500
     ${err ? "border-red-400 bg-red-50" : "border-gray-300"}`;
