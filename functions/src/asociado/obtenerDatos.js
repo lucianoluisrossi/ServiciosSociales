@@ -22,7 +22,7 @@ exports.obtenerDatosAsociado = onCall(
 
     let data;
     try {
-      const url = `${API_CELTA_URL.value()}/api/data?cliDocNro=${dni}`;
+      const url = `${API_CELTA_URL.value()}${dni}`;
       console.log("Llamando API CELTA:", url);
 
       const res = await fetch(url, {
