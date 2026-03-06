@@ -50,25 +50,28 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-          Familiares adheridos ({adheridos.length})
+        <h2 className="text-sm font-semibold text-gray-700">
+          Familiares adheridos
+          <span className="ml-2 bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">
+            {adheridos.length}
+          </span>
         </h2>
         {!solicitudActiva && (
           <button
             onClick={() => { setAgregando(true); setEditando(null); }}
-            className="text-xs text-blue-600 font-medium hover:underline"
+            className="flex items-center gap-1 text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
-            + Agregar familiar
+            + Agregar
           </button>
         )}
       </div>
 
       {/* Formulario para agregar */}
       {agregando && (
-        <div className="p-4 border-b border-blue-50 bg-blue-50/30">
-          <p className="text-xs font-semibold text-blue-700 mb-3">Nuevo familiar</p>
+        <div className="p-4 border-b border-blue-50 bg-blue-50/40">
+          <p className="text-xs font-semibold text-blue-700 mb-3">➕ Nuevo familiar</p>
           <FormAdherido
             onGuardar={handleGuardarNuevo}
             onCancelar={() => setAgregando(false)}
@@ -78,8 +81,9 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
 
       {/* Lista vacía */}
       {adheridos.length === 0 && !agregando && (
-        <p className="text-sm text-gray-400 text-center py-8">
-          No hay familiares adheridos.
+        <p className="text-sm text-gray-400 text-center py-10">
+          No hay familiares adheridos.<br/>
+          <span className="text-xs">Podés agregar uno con el botón de arriba.</span>
         </p>
       )}
 
@@ -91,49 +95,57 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
         return (
           <div key={a.socDocNro}>
             <div
-              className={`px-4 py-3 flex items-start justify-between gap-3 transition-colors
-                ${eliminado ? "bg-red-50 opacity-60" : ""}
+              className={`px-4 py-4 flex items-start justify-between gap-3 transition-colors
+                ${eliminado ? "bg-red-50 opacity-60" : "hover:bg-gray-50"}
                 ${editadoPendiente ? "bg-amber-50" : ""}
               `}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-medium text-gray-800">
+                  <p className="text-sm font-semibold text-gray-800">
                     {a.socNom}
                   </p>
-                  <span className="text-xs text-gray-400">{a.pareDsc}</span>
+                  {a.pareDsc && (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                      {a.pareDsc}
+                    </span>
+                  )}
                   {eliminado && (
-                    <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">
+                    <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
                       A eliminar
                     </span>
                   )}
                   {editadoPendiente && (
-                    <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
                       Editado
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  DNI: {a.socDocNro} &middot; Nac: {formatFecha(a.cliFecNac)}
+                <p className="text-xs text-gray-500 mt-1">
+                  DNI {a.socDocNro}
                 </p>
-                <p className="text-xs text-gray-400">
-                  Adherido: {formatFecha(a.sumFacFAd)}
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Nac: {formatFecha(a.cliFecNac)} · Adherido: {formatFecha(a.sumFacFAd)}
                 </p>
               </div>
 
               {!solicitudActiva && (
-                <div className="flex gap-3 shrink-0 pt-0.5">
+                <div className="flex flex-col gap-2 shrink-0 pt-0.5">
                   {!eliminado && (
                     <button
                       onClick={() => handleEditar(a)}
-                      className="text-xs text-blue-600 hover:underline"
+                      className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
                     >
                       Editar
                     </button>
                   )}
                   <button
                     onClick={() => handleEliminar(a)}
-                    className={`text-xs hover:underline ${eliminado ? "text-gray-500" : "text-red-500"}`}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
+                      ${eliminado
+                        ? "text-gray-500 bg-gray-100 hover:bg-gray-200"
+                        : "text-red-600 bg-red-50 hover:bg-red-100"
+                      }`}
                   >
                     {eliminado ? "Deshacer" : "Eliminar"}
                   </button>

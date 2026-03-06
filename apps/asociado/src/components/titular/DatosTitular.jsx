@@ -1,27 +1,29 @@
 export default function DatosTitular({ titular }) {
   if (!titular) return null;
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-        Datos del titular
-      </h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Dato label="Razón Social"    value={titular.titNom} />
-        <Dato label="N° Documento"    value={titular.socDocNro} />
-        <Dato label="Cód. Asociado"   value={titular.cliCod} />
-        <Dato label="Cuenta"          value={titular.sumNro} />
-        <Dato label="Fecha Nac."      value={formatFecha(titular.cliFecNac)} />
-        <Dato label="Fecha Adhesión"  value={formatFecha(titular.sumFacFAd)} />
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Encabezado con nombre */}
+      <div className="bg-blue-600 px-4 py-4">
+        <p className="text-xs text-blue-200 uppercase tracking-wide font-medium mb-0.5">Titular</p>
+        <h2 className="text-lg font-bold text-white leading-tight">{titular.titNom ?? "—"}</h2>
+      </div>
+      {/* Grilla de datos */}
+      <div className="grid grid-cols-2 gap-px bg-gray-100">
+        <Dato label="N° Documento"   value={titular.socDocNro} />
+        <Dato label="Cód. Asociado"  value={titular.cliCod} />
+        <Dato label="Cuenta"         value={titular.sumNro} />
+        <Dato label="Fecha Nac."     value={formatFecha(titular.cliFecNac)} />
+        <Dato label="Fecha Adhesión" value={formatFecha(titular.sumFacFAd)} fullWidth />
       </div>
     </div>
   );
 }
 
-function Dato({ label, value }) {
+function Dato({ label, value, fullWidth }) {
   return (
-    <div>
+    <div className={`bg-white px-4 py-3 ${fullWidth ? "col-span-2" : ""}`}>
       <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className="text-sm font-medium text-gray-800">{value ?? "—"}</p>
+      <p className="text-sm font-semibold text-gray-800">{value ?? "—"}</p>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { getAuth, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import DatosTitular from "../components/titular/DatosTitular";
@@ -12,14 +11,7 @@ export default function PanelPage() {
   const auth = getAuth();
   const navigate = useNavigate();
   const { titular, adheridos, loading, error, recargar } = useAdheridos();
-  const {
-    cambios,
-    solicitudActual,
-    agregarCambio,
-    quitarCambio,
-    enviarSolicitud,
-    enviando,
-  } = useSolicitud();
+  const { cambios, solicitudActual, agregarCambio, quitarCambio, enviarSolicitud, enviando } = useSolicitud();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -28,9 +20,9 @@ export default function PanelPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-3" />
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-500 text-sm">Cargando sus datos...</p>
         </div>
       </div>
@@ -39,13 +31,14 @@ export default function PanelPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white rounded-xl shadow p-6 max-w-sm w-full text-center">
-          <p className="text-red-600 font-medium mb-2">Error al cargar datos</p>
-          <p className="text-gray-500 text-sm mb-4">{error}</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg p-6 max-w-sm w-full text-center">
+          <div className="text-4xl mb-3">⚠️</div>
+          <p className="text-gray-800 font-semibold mb-1">No se pudieron cargar los datos</p>
+          <p className="text-gray-500 text-sm mb-5">{error}</p>
           <button
             onClick={recargar}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+            className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium"
           >
             Reintentar
           </button>
@@ -54,27 +47,31 @@ export default function PanelPage() {
     );
   }
 
-  const hayCambiosPendientes = cambios.length > 0;
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="bg-blue-700 text-white sticky top-0 z-10 shadow-md">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-800">CELTA</h1>
-            <p className="text-xs text-gray-500">Servicio de Sepelios</p>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center text-base">
+              🤝
+            </div>
+            <div>
+              <h1 className="text-sm font-bold leading-tight">Vínculos CELTA</h1>
+              <p className="text-xs text-blue-200 leading-tight">Servicio de Sepelios</p>
+            </div>
           </div>
           <button
             onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-red-600 transition-colors"
+            className="text-xs text-blue-200 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
           >
             Salir
           </button>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-10">
 
         {/* Estado de solicitud activa */}
         {solicitudActual && (
@@ -82,7 +79,7 @@ export default function PanelPage() {
         )}
 
         {/* Datos del titular */}
-        {titular && <DatosTitular titular={titular} />}
+        <DatosTitular titular={titular} />
 
         {/* Lista de adheridos */}
         <ListaAdheridos
@@ -93,8 +90,8 @@ export default function PanelPage() {
           solicitudActiva={!!solicitudActual && solicitudActual.estado === "pendiente"}
         />
 
-        {/* Resumen y envío de cambios */}
-        {hayCambiosPendientes && (
+        {/* Resumen y envío */}
+        {cambios.length > 0 && (
           <ResumenCambios
             cambios={cambios}
             adheridos={adheridos}
