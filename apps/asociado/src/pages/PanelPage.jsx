@@ -87,7 +87,7 @@ export default function PanelPage() {
           cambios={cambios}
           onAgregarCambio={agregarCambio}
           onQuitarCambio={quitarCambio}
-          solicitudActiva={!!solicitudActual && solicitudActual.estado === "pendiente"}
+          solicitudActiva={false}
         />
 
         {/* Resumen y envío */}

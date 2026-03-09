@@ -4,14 +4,14 @@ export default function EstadoSolicitud({ solicitud }) {
       bg: "bg-amber-50 border-amber-200",
       icon: "⏳",
       titulo: "Solicitud en revisión",
-      desc: "Sus cambios fueron recibidos y están siendo revisados por el equipo de CELTA.",
+      desc: "Sus cambios están siendo revisados por CELTA. Podés seguir agregando o modificando datos mientras tanto.",
       color: "text-amber-800",
     },
     aprobada: {
       bg: "bg-green-50 border-green-200",
       icon: "✅",
       titulo: "Solicitud aprobada",
-      desc: "Sus cambios fueron aprobados y ya están aplicados en el sistema.",
+      desc: "Sus cambios fueron aprobados. Si necesitás hacer nuevas modificaciones, podés hacerlo ahora.",
       color: "text-green-800",
     },
     rechazada: {
@@ -19,8 +19,8 @@ export default function EstadoSolicitud({ solicitud }) {
       icon: "❌",
       titulo: "Solicitud rechazada",
       desc: solicitud.motivoRechazo
-        ? `Motivo: ${solicitud.motivoRechazo}`
-        : "Su solicitud fue rechazada. Puede enviar una nueva solicitud con los datos corregidos.",
+        ? `Motivo: ${solicitud.motivoRechazo}. Podés corregir los datos y enviar una nueva solicitud.`
+        : "Su solicitud fue rechazada. Podés corregir los datos y enviar una nueva solicitud.",
       color: "text-red-800",
     },
   };
