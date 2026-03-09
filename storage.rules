@@ -1,14 +1,21 @@
-﻿rules_version = '2';
+rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /dni/{solicitudId}/{adheridoId}/{archivo} {
+
+    // Fotos de DNI subidas por el asociado
+    // Ruta: solicitudes/{dniTitular}/{dniAdherido}/{archivo}
+    match /solicitudes/{dniTitular}/{dniAdherido}/{archivo} {
       allow write: if request.auth != null
-        && request.auth.token.rol == "asociado"
-        && archivo.matches('(frente|dorso)\\.jpg')
-        && request.resource.size < 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+                   && request.auth.token.rol == "asociado"
+                   && request.auth.token.dni == dniTitular
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+
+      // Lectura solo via Signed URL (Cloud Function getSignedUrl)
       allow read: if false;
     }
+
+    // Todo lo demás: denegado
     match /{allPaths=**} {
       allow read, write: if false;
     }
