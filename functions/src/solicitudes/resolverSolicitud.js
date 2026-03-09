@@ -15,6 +15,7 @@ exports.resolverSolicitud = onCall(
     secrets: [RESEND_API_KEY, EMAIL_BACKOFFICE, PANEL_URL],
     cors: [
       "https://celta-sepelios.vercel.app",
+      "https://servicios-sociales-empleados.vercel.app",
       "http://localhost:5174",
     ],
   },
