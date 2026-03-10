@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useAuthEmpleado } from "../hooks/useAuthEmpleado";
 import ListaSolicitudes from "../components/ListaSolicitudes";
 import DetalleSolicitud from "../components/DetalleSolicitud";
+import FormCrearCuenta from "../components/FormCrearCuenta";
 
 export default function PanelPage() {
   const { user, rol, logout } = useAuthEmpleado();
   const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
+  const [tab, setTab] = useState("solicitudes");
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -37,6 +39,34 @@ export default function PanelPage() {
         </div>
       </header>
 
+      {/* Tabs — solo cuando no hay solicitud seleccionada */}
+      {!solicitudSeleccionada && (
+        <div className="bg-white border-b border-gray-200 px-6">
+          <div className="max-w-4xl mx-auto flex gap-1">
+            <button
+              onClick={() => setTab("solicitudes")}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === "solicitudes"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Solicitudes
+            </button>
+            <button
+              onClick={() => setTab("nueva-cuenta")}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                tab === "nueva-cuenta"
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Nueva cuenta
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Contenido */}
       <main className="max-w-4xl mx-auto px-4 py-6">
         {solicitudSeleccionada ? (
@@ -45,8 +75,10 @@ export default function PanelPage() {
             onVolver={() => setSolicitudSeleccionada(null)}
             onResuelta={() => setSolicitudSeleccionada(null)}
           />
-        ) : (
+        ) : tab === "solicitudes" ? (
           <ListaSolicitudes onSeleccionar={setSolicitudSeleccionada} />
+        ) : (
+          <FormCrearCuenta />
         )}
       </main>
     </div>

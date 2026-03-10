@@ -1,5 +1,7 @@
 ﻿const { initializeApp } = require("firebase-admin/app");
 initializeApp();
+const { crearCuenta } = require("./asociado/crearCuenta");
+exports.crearCuenta = crearCuenta;
 
 const { iniciarSesionAsociado, verificarOTPAsociado } =
   require("./auth/sesionAsociado");
