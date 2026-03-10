@@ -89,8 +89,8 @@ export default function ListaSolicitudes({ onSeleccionar }) {
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5 flex gap-3 flex-wrap">
                     <span>DNI {s.titular?.socDocNro ?? s.titularDni}</span>
-                    <span>Cód. {s.clicod}</span>
-                    {s.titular?.sumNro && <span>N° afil. {s.titular.sumNro}</span>}
+                    <span>Persona {s.clicod}</span>
+                    {s.titular?.sumNro && <span>Cuenta {s.titular.sumNro}</span>}
                   </div>
                   <div className="text-xs text-gray-400 mt-1">{formatFecha(s.creadoEn)}</div>
                   <div className="text-sm text-gray-600 mt-1">
