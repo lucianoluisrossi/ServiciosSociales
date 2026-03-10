@@ -1,162 +1,141 @@
-// hooks/useSolicitud.js
-import { useState, useEffect } from "react";
-import { db } from "../services/firebase";
+import { useState, useEffect, useCallback } from "react";
+import { getAuth } from "firebase/auth";
 import {
+  getFirestore,
   collection,
-  addDoc,
   query,
   where,
   orderBy,
   limit,
   onSnapshot,
+  addDoc,
   serverTimestamp,
-  doc,
-  setDoc,
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
 
-/**
- * Maneja el estado de la solicitud activa del asociado.
- * Incluye:
- *  - cambios en adheridos (agregar / editar / eliminar)
- *  - cambios en datos del titular (celular, facturaElectronica)
- */
 export function useSolicitud(titular) {
   const [cambios, setCambios] = useState([]);
   const [cambiosTitular, setCambiosTitular] = useState(null); // { celular, facturaElectronica }
-  const [solicitudActiva, setSolicitudActiva] = useState(null);
+  const [solicitudActual, setSolicitudActual] = useState(null);
   const [enviando, setEnviando] = useState(false);
-  const [error, setError] = useState(null);
 
   const auth = getAuth();
-  const dni = auth.currentUser?.claims?.dni ?? auth.currentUser?.uid;
+  const db = getFirestore();
 
   // Escucha la solicitud activa en tiempo real
   useEffect(() => {
-    if (!dni) return;
+    const user = auth.currentUser;
+    if (!user) return;
 
-    const q = query(
-      collection(db, "solicitudes"),
-      where("titularDni", "==", dni),
-      where("estado", "in", ["pendiente", "aprobada", "rechazada"]),
-      orderBy("creadoEn", "desc"),
-      limit(1)
-    );
+    user.getIdTokenResult().then((tokenResult) => {
+      const dniAsociado = tokenResult.claims.dni;
+      if (!dniAsociado) return;
 
-    const unsub = onSnapshot(q, (snap) => {
-      if (!snap.empty) {
-        const doc = snap.docs[0];
-        setSolicitudActiva({ id: doc.id, ...doc.data() });
-      } else {
-        setSolicitudActiva(null);
-      }
+      const q = query(
+        collection(db, "solicitudes"),
+        where("titularDni", "==", dniAsociado),
+        where("estado", "in", ["pendiente", "aprobada", "rechazada"]),
+        orderBy("creadoEn", "desc"),
+        limit(1)
+      );
+
+      const unsub = onSnapshot(q, (snap) => {
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          const data = { id: doc.id, ...doc.data() };
+          const ahora = Date.now();
+          const creadoEn = data.creadoEn?.toMillis?.() ?? 0;
+          const horas48 = 48 * 60 * 60 * 1000;
+          if (data.estado === "pendiente" || ahora - creadoEn < horas48) {
+            setSolicitudActual(data);
+          } else {
+            setSolicitudActual(null);
+          }
+        } else {
+          setSolicitudActual(null);
+        }
+      });
+
+      return () => unsub();
     });
-
-    return () => unsub();
-  }, [dni]);
+  }, [auth.currentUser]);
 
   // --- Cambios en adheridos ---
 
-  function agregarCambio(tipo, datos) {
+  const agregarCambio = useCallback((cambio) => {
     setCambios((prev) => {
-      // Si ya existe un cambio para este adherido, reemplazarlo
       const sinDuplicado = prev.filter(
-        (c) => !(c.tipo === tipo && c.datos?.socDocNro === datos?.socDocNro)
+        (c) => !(c.tipo === cambio.tipo && c.adheridoDni === cambio.adheridoDni)
       );
-      return [...sinDuplicado, { tipo, datos, timestamp: Date.now() }];
+      return [...sinDuplicado, cambio];
     });
-  }
+  }, []);
 
-  function quitarCambio(tipo, socDocNro) {
-    setCambios((prev) =>
-      prev.filter(
-        (c) => !(c.tipo === tipo && c.datos?.socDocNro === socDocNro)
-      )
-    );
-  }
+  const quitarCambio = useCallback((index) => {
+    setCambios((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   // --- Cambios en titular ---
 
-  /**
-   * Llamado desde DatosTitular cuando el titular guarda sus cambios.
-   * @param {Object} nuevosDatos - { celular, facturaElectronica }
-   */
-  function actualizarDatosTitular(nuevosDatos) {
+  const actualizarDatosTitular = useCallback((nuevosDatos) => {
     setCambiosTitular(nuevosDatos);
-  }
+  }, []);
 
-  // --- Envío de solicitud ---
+  // --- Envío ---
 
-  const hayAlgoCambio =
-    cambios.length > 0 || cambiosTitular !== null;
+  const enviarSolicitud = useCallback(
+    async (clicod, datosTitular) => {
+      const hayAlgo = cambios.length > 0 || cambiosTitular !== null;
+      if (!hayAlgo) return;
 
-  async function enviarSolicitud() {
-    if (!hayAlgoCambio || !titular) return;
-    setEnviando(true);
-    setError(null);
+      setEnviando(true);
+      try {
+        const user = auth.currentUser;
+        const tokenResult = await user.getIdTokenResult();
+        const dniAsociado = tokenResult.claims.dni;
 
-    try {
-      const solicitudData = {
-        estado: "pendiente",
-        titularDni: dni,
-        clicod: titular.cliCod,
-        titular: {
-          titNom: titular.titNom,
-          sumNro: titular.sumNro,
-          socDocNro: titular.socDocNro,
-        },
-        cambios,
-        ...(cambiosTitular
-          ? {
-              cambiosTitular: {
-                ...cambiosTitular,
-                // Guardamos también los valores originales para que el empleado
-                // pueda comparar en el panel
-                original: {
-                  celular: titular.celular ?? null,
-                  facturaElectronica: titular.facturaElectronica ?? false,
-                },
-              },
-            }
-          : {}),
-        creadoEn: serverTimestamp(),
-        revisadoPor: null,
-        motivoRechazo: null,
-      };
-
-      // Guardar datos del titular en cuentas_asociados (sin los cambios aún)
-      await setDoc(
-        doc(db, "cuentas_asociados", dni),
-        {
-          ultimoAcceso: serverTimestamp(),
-          // Si hay cambios en titular, los marcamos como pendientes
+        await addDoc(collection(db, "solicitudes"), {
+          titularDni: dniAsociado,
+          clicod: clicod ?? null,
+          titular: {
+            titNom: datosTitular?.titNom ?? null,
+            sumNro: datosTitular?.sumNro ?? null,
+            socDocNro: datosTitular?.socDocNro ?? null,
+          },
+          cambios,
+          // Solo incluir cambiosTitular si existe
           ...(cambiosTitular
-            ? { cambiosTitularPendientes: cambiosTitular }
+            ? {
+                cambiosTitular: {
+                  ...cambiosTitular,
+                  original: {
+                    celular: titular?.celular ?? null,
+                    facturaElectronica: titular?.facturaElectronica ?? false,
+                  },
+                },
+              }
             : {}),
-        },
-        { merge: true }
-      );
+          estado: "pendiente",
+          creadoEn: serverTimestamp(),
+          revisadoPor: null,
+          motivoRechazo: null,
+        });
 
-      await addDoc(collection(db, "solicitudes"), solicitudData);
-
-      // Limpiar estado local tras envío exitoso
-      setCambios([]);
-      setCambiosTitular(null);
-    } catch (err) {
-      console.error("Error al enviar solicitud:", err);
-      setError("No se pudo enviar la solicitud. Intentá de nuevo.");
-    } finally {
-      setEnviando(false);
-    }
-  }
+        setCambios([]);
+        setCambiosTitular(null);
+      } catch (e) {
+        throw e;
+      } finally {
+        setEnviando(false);
+      }
+    },
+    [cambios, cambiosTitular, titular, auth, db]
+  );
 
   return {
     cambios,
     cambiosTitular,
-    solicitudActiva,
+    solicitudActual,
     enviando,
-    error,
-    hayAlgoCambio,
     agregarCambio,
     quitarCambio,
     actualizarDatosTitular,
