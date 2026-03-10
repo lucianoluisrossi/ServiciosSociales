@@ -47,7 +47,7 @@ export default function LoginPage() {
 
       {/* Marca */}
       <div className="mb-8 text-center">
-        <div className="w-36 h-36 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+        <div className="w-48 h-48 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
           <img
             src="/icons/icon-192.png"
             alt="CELTA"
