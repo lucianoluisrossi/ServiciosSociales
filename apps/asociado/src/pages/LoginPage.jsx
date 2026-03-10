@@ -47,11 +47,13 @@ export default function LoginPage() {
 
       {/* Marca */}
       <div className="mb-8 text-center">
-        <img
-          src="/icons/icon-192.png"
-          alt="CELTA"
-          className="w-24 h-24 mx-auto mb-4 drop-shadow-lg"
-        />
+        <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <img
+            src="/icons/icon-192.png"
+            alt="CELTA"
+            className="w-16 h-16 object-contain"
+          />
+        </div>
         <div className="w-16 h-16 bg-white/15 border-2 border-white/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <span className="text-3xl">🤝</span>
         </div>
