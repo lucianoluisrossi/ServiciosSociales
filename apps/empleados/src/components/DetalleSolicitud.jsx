@@ -1,135 +1,191 @@
-import { doc, onSnapshot } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { db } from "../services/firebase";
+// components/DetalleSolicitud.jsx
+import { useState } from "react";
 import VisorDNI from "./VisorDNI";
 import AccionesRevision from "./AccionesRevision";
 
-const TIPO_META = {
-  agregar:  { label: "Alta de adherido",  color: "bg-blue-100 text-blue-800",   icon: "➕" },
-  editar:   { label: "Modificación",       color: "bg-yellow-100 text-yellow-800", icon: "✏️" },
-  eliminar: { label: "Baja de adherido",   color: "bg-red-100 text-red-800",     icon: "🗑️" },
-};
+export default function DetalleSolicitud({ solicitud, onResuelto }) {
+  const [dniAbierto, setDniAbierto] = useState(null);
 
-function formatFecha(val) {
-  if (!val) return "—";
-  const d = new Date(val);
-  if (isNaN(d)) return val;
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
+  if (!solicitud) return null;
 
-function CampoTabla({ nombre, valor }) {
-  return (
-    <tr className="border-t border-gray-100">
-      <td className="py-1.5 pr-4 text-xs text-gray-500 font-medium w-36">{nombre}</td>
-      <td className="py-1.5 text-sm text-gray-800">{valor || "—"}</td>
-    </tr>
-  );
-}
-
-function TarjetaCambio({ cambio, dniTitular }) {
-  const meta = TIPO_META[cambio.tipo] ?? { label: cambio.tipo, color: "bg-gray-100 text-gray-700", icon: "•" };
-  const d = cambio.datos ?? {};
-  const tieneFoto = !!(cambio.fotoFrentePath || cambio.fotoDorsoPath);
+  const { titular, cambios = [], cambiosTitular, estado, motivoRechazo } = solicitud;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${meta.color}`}>
-          {meta.icon} {meta.label}
-        </span>
-        <span className="text-xs text-gray-400">DNI adherido: {cambio.adheridoDni ?? d.socDocNro ?? "—"}</span>
-      </div>
-
-      {/* Para bajas solo mostramos el DNI, no hay datos adicionales */}
-      {cambio.tipo === "eliminar" ? (
-        <p className="text-sm text-gray-500 italic">
-          Se solicita dar de baja al adherido con DNI {cambio.adheridoDni}.
+    <div className="space-y-5">
+      {/* Encabezado titular */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Titular</p>
+        <p className="text-lg font-semibold text-gray-800">{titular?.titNom}</p>
+        <p className="text-sm text-gray-500">
+          DNI {titular?.socDocNro} · Contrato {titular?.sumNro}
         </p>
-      ) : (
-        <table className="w-full">
-          <tbody>
-            <CampoTabla nombre="Apellido y nombre" valor={d.socNom} />
-            <CampoTabla nombre="DNI"               valor={d.socDocNro} />
-            <CampoTabla nombre="Fecha de nac."     valor={formatFecha(d.cliFecNac)} />
-            <CampoTabla nombre="Parentesco"        valor={d.pareDsc} />
-          </tbody>
-        </table>
-      )}
-
-      {tieneFoto && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4">
-          {cambio.fotoFrentePath && (
-            <VisorDNI path={cambio.fotoFrentePath} label="DNI frente" />
-          )}
-          {cambio.fotoDorsoPath && (
-            <VisorDNI path={cambio.fotoDorsoPath} label="DNI dorso" />
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResuelta }) {
-  const [sol, setSol] = useState(inicial);
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, "solicitudes", inicial.id), snap => {
-      if (snap.exists()) setSol({ id: snap.id, ...snap.data() });
-    });
-    return unsub;
-  }, [inicial.id]);
-
-  const pendiente = sol.estado === "pendiente";
-
-  return (
-    <div>
-      {/* Encabezado */}
-      <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <h2 className="text-lg font-bold text-gray-800">Solicitud — DNI {sol.titularDni}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Código cliente: {sol.clicod}</p>
-          </div>
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-1 ${
-            sol.estado === "pendiente" ? "bg-yellow-100 text-yellow-800" :
-            sol.estado === "aprobado"  ? "bg-green-100 text-green-800" :
-                                         "bg-red-100 text-red-800"
-          }`}>
-            {sol.estado}
-          </span>
-        </div>
-
-        {sol.estado === "rechazado" && sol.motivoRechazo && (
-          <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
-            <strong>Motivo de rechazo:</strong> {sol.motivoRechazo}
-          </div>
+        <EstadoBadge estado={estado} />
+        {motivoRechazo && (
+          <p className="mt-2 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+            Motivo de rechazo: {motivoRechazo}
+          </p>
         )}
       </div>
 
-      {/* Cambios */}
-      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
-        Cambios solicitados ({sol.cambios?.length ?? 0})
-      </h3>
-
-      {(!sol.cambios || sol.cambios.length === 0) && (
-        <p className="text-gray-400 text-sm mb-4">Sin cambios registrados.</p>
+      {/* Cambios en datos del titular */}
+      {cambiosTitular && (
+        <Section titulo="Cambios en datos del titular" icono="👤">
+          <div className="space-y-3">
+            {cambiosTitular.celular !== undefined && (
+              <FilaCambio
+                label="Celular"
+                antes={cambiosTitular.original?.celular ?? "Sin número"}
+                despues={cambiosTitular.celular || "Sin número"}
+              />
+            )}
+            {cambiosTitular.facturaElectronica !== undefined && (
+              <FilaCambio
+                label="Factura electrónica"
+                antes={
+                  cambiosTitular.original?.facturaElectronica
+                    ? "Activa"
+                    : "Inactiva"
+                }
+                despues={
+                  cambiosTitular.facturaElectronica ? "Activar" : "Desactivar"
+                }
+              />
+            )}
+          </div>
+        </Section>
       )}
 
-      <div className="space-y-3 mb-6">
-        {sol.cambios?.map((c, i) => (
-          <TarjetaCambio key={i} cambio={c} dniTitular={sol.titularDni} />
-        ))}
-      </div>
+      {/* Cambios en adheridos */}
+      {cambios.length > 0 && (
+        <Section titulo="Familiares adheridos" icono="👨‍👩‍👧">
+          <div className="space-y-3">
+            {cambios.map((c, i) => (
+              <TarjetaCambioAdherido
+                key={i}
+                cambio={c}
+                onVerDni={(path) => setDniAbierto(path)}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* Acciones */}
-      {pendiente ? (
-        <AccionesRevision solicitudId={sol.id} onResuelta={onResuelta} />
-      ) : (
-        <p className="text-center text-sm text-gray-400 mt-4">
-          Esta solicitud ya fue resuelta y no puede modificarse.
-        </p>
+      {estado === "pendiente" && (
+        <AccionesRevision
+          solicitudId={solicitud.id}
+          titularDni={solicitud.titularDni}
+          onResuelto={onResuelto}
+        />
+      )}
+
+      {/* Visor DNI */}
+      {dniAbierto && (
+        <VisorDNI path={dniAbierto} onCerrar={() => setDniAbierto(null)} />
       )}
     </div>
   );
+}
+
+// --- Sub-componentes ---
+
+function Section({ titulo, icono, children }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+      <p className="text-sm font-semibold text-gray-700 mb-3">
+        {icono} {titulo}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function FilaCambio({ label, antes, despues }) {
+  const cambio = antes !== despues;
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <p className="text-sm text-gray-500 w-40 shrink-0">{label}</p>
+      <div className="flex items-center gap-2 text-sm flex-wrap">
+        <span className="text-gray-400 line-through">{antes}</span>
+        <span className="text-gray-300">→</span>
+        <span className={cambio ? "text-blue-700 font-medium" : "text-gray-600"}>
+          {despues}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TarjetaCambioAdherido({ cambio, onVerDni }) {
+  const { tipo, datos } = cambio;
+  const colorTipo = {
+    agregar: "border-l-green-500",
+    editar: "border-l-blue-500",
+    eliminar: "border-l-red-400",
+  }[tipo] ?? "border-l-gray-300";
+
+  const labelTipo = {
+    agregar: "Nuevo familiar",
+    editar: "Modificación",
+    eliminar: "Baja",
+  }[tipo] ?? tipo;
+
+  return (
+    <div className={`border-l-4 ${colorTipo} pl-4 py-1`}>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-gray-800">
+          {datos?.socNom ?? `DNI ${datos?.socDocNro}`}
+        </p>
+        <span className="text-xs text-gray-400">{labelTipo}</span>
+      </div>
+      <p className="text-xs text-gray-500">
+        DNI {datos?.socDocNro}
+        {datos?.pareDsc && ` · ${datos.pareDsc}`}
+        {datos?.cliFecNac && ` · Nac. ${formatearFecha(datos.cliFecNac)}`}
+      </p>
+      {/* Fotos DNI si existen */}
+      {datos?.fotoDniFrenteUrl && (
+        <button
+          onClick={() => onVerDni(datos.fotoDniFrenteUrl)}
+          className="text-xs text-blue-600 hover:underline mt-1 mr-3"
+        >
+          Ver frente DNI
+        </button>
+      )}
+      {datos?.fotoDniDorsoUrl && (
+        <button
+          onClick={() => onVerDni(datos.fotoDniDorsoUrl)}
+          className="text-xs text-blue-600 hover:underline mt-1"
+        >
+          Ver dorso DNI
+        </button>
+      )}
+    </div>
+  );
+}
+
+function EstadoBadge({ estado }) {
+  const config = {
+    pendiente: "bg-yellow-100 text-yellow-700",
+    aprobada: "bg-green-100 text-green-700",
+    rechazada: "bg-red-100 text-red-700",
+  };
+  return (
+    <span
+      className={`inline-block mt-2 text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
+        config[estado] ?? "bg-gray-100 text-gray-500"
+      }`}
+    >
+      {estado}
+    </span>
+  );
+}
+
+function formatearFecha(fecha) {
+  if (!fecha) return "";
+  try {
+    return new Date(fecha).toLocaleDateString("es-AR");
+  } catch {
+    return fecha;
+  }
 }

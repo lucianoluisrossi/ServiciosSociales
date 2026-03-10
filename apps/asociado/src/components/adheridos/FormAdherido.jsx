@@ -1,157 +1,239 @@
+// components/adheridos/FormAdherido.jsx
 import { useState } from "react";
-import SubirDNI from "./SubirDNI";
+
+/**
+ * La API devuelve SocNom como "APELLIDO NOMBRE" (todo mayúsculas, concatenado).
+ * Estrategia de split: la primera palabra es el apellido, el resto es el nombre.
+ * Esto funciona bien para apellidos simples. Para apellidos compuestos el empleado
+ * podrá corregirlo al revisar la solicitud.
+ */
+function splitNombreApellido(socNom = "") {
+  const partes = socNom.trim().split(/\s+/);
+  if (partes.length === 0) return { apellido: "", nombre: "" };
+  if (partes.length === 1) return { apellido: partes[0], nombre: "" };
+  return {
+    apellido: partes[0],
+    nombre: partes.slice(1).join(" "),
+  };
+}
 
 const PARENTESCOS = [
-  "Cónyuge", "Hijo/a", "Padre", "Madre", "Hermano/a",
-  "Abuelo/a", "Nieto/a", "Suegro/a", "Cuñado/a", "Otro",
+  "Cónyuge",
+  "Hijo/a",
+  "Padre",
+  "Madre",
+  "Hermano/a",
+  "Otro",
 ];
 
-export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
-  const [form, setForm] = useState({
-    socNom:    inicial?.socNom    ?? "",
-    socDocNro: inicial?.socDocNro ?? "",
-    cliFecNac: toInputDate(inicial?.cliFecNac),
-    pareDsc:   inicial?.pareDsc   ?? "",
-  });
-  const [fotoFrentePath, setFotoFrentePath] = useState(null);
-  const [fotoDorsoPath,  setFotoDorsoPath]  = useState(null);
+export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
+  const inicial = splitNombreApellido(adherido?.socNom);
+
+  const [apellido, setApellido] = useState(inicial.apellido);
+  const [nombre, setNombre] = useState(inicial.nombre);
+  const [dni, setDni] = useState(adherido?.socDocNro ?? "");
+  const [fechaNac, setFechaNac] = useState(
+    formatearFechaInput(adherido?.cliFecNac)
+  );
+  const [parentesco, setParentesco] = useState(adherido?.pareDsc ?? "");
   const [errores, setErrores] = useState({});
 
-  const esEdicion = !!inicial;
+  const esNuevo = !adherido;
 
-  const set = (campo, val) => {
-    setForm((prev) => ({ ...prev, [campo]: val }));
-    setErrores((prev) => ({ ...prev, [campo]: null }));
-  };
-
-  const validar = () => {
+  function validar() {
     const e = {};
-    if (!form.socNom.trim())    e.socNom = "Requerido";
-    if (!form.socDocNro.trim() || !/^\d{7,8}$/.test(form.socDocNro.trim()))
-      e.socDocNro = "DNI inválido (7-8 dígitos)";
-    if (!form.cliFecNac)        e.cliFecNac = "Requerida";
-    if (!form.pareDsc)          e.pareDsc = "Requerido";
+    if (!apellido.trim()) e.apellido = "El apellido es obligatorio.";
+    if (!nombre.trim()) e.nombre = "El nombre es obligatorio.";
+    if (!dni.trim() || !/^\d{7,8}$/.test(dni.trim()))
+      e.dni = "Ingresá un DNI válido (7 u 8 dígitos).";
+    if (!fechaNac) e.fechaNac = "La fecha de nacimiento es obligatoria.";
+    if (!parentesco) e.parentesco = "Seleccioná un parentesco.";
     return e;
-  };
+  }
 
-  const handleSubmit = () => {
+  function handleGuardar() {
     const e = validar();
-    if (Object.keys(e).length > 0) { setErrores(e); return; }
-    onGuardar(
-      { ...form, socDocNro: form.socDocNro.trim() },
-      fotoFrentePath,
-      fotoDorsoPath
-    );
-  };
+    if (Object.keys(e).length > 0) {
+      setErrores(e);
+      return;
+    }
+
+    onGuardar({
+      // Guardamos apellido y nombre separados + el campo original reconstruido
+      apellido: apellido.trim().toUpperCase(),
+      nombre: nombre.trim().toUpperCase(),
+      socNom: `${apellido.trim().toUpperCase()} ${nombre.trim().toUpperCase()}`,
+      socDocNro: dni.trim(),
+      cliFecNac: fechaNac,
+      pareDsc: parentesco,
+      // Si es edición, preservar el ID original
+      ...(adherido?.id ? { id: adherido.id } : {}),
+    });
+  }
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <Campo label="Apellido y nombre *" error={errores.socNom}>
-          <input
-            className={input(errores.socNom)}
-            value={form.socNom}
-            onChange={(e) => set("socNom", e.target.value)}
-            placeholder="García Juan"
-          />
-        </Campo>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+      <h3 className="text-base font-semibold text-gray-800 mb-4">
+        {esNuevo ? "Agregar familiar" : "Editar familiar"}
+      </h3>
 
-        <Campo label="DNI *" error={errores.socDocNro}>
-          <input
-            className={input(errores.socDocNro)}
-            value={form.socDocNro}
-            onChange={(e) => set("socDocNro", e.target.value)}
-            placeholder="12345678"
-            disabled={esEdicion}
+      <div className="space-y-4">
+        {/* Apellido y Nombre en fila */}
+        <div className="grid grid-cols-2 gap-3">
+          <Campo
+            label="Apellido"
+            value={apellido}
+            onChange={(v) => {
+              setApellido(v);
+              setErrores((e) => ({ ...e, apellido: undefined }));
+            }}
+            error={errores.apellido}
+            placeholder="GARCÍA"
+            autoCapitalize="characters"
           />
-        </Campo>
+          <Campo
+            label="Nombre/s"
+            value={nombre}
+            onChange={(v) => {
+              setNombre(v);
+              setErrores((e) => ({ ...e, nombre: undefined }));
+            }}
+            error={errores.nombre}
+            placeholder="JUAN CARLOS"
+            autoCapitalize="characters"
+          />
+        </div>
 
-        <Campo label="Fecha de nacimiento *" error={errores.cliFecNac}>
+        {/* DNI */}
+        <Campo
+          label="DNI"
+          value={dni}
+          onChange={(v) => {
+            setDni(v);
+            setErrores((e) => ({ ...e, dni: undefined }));
+          }}
+          error={errores.dni}
+          placeholder="12345678"
+          inputMode="numeric"
+          maxLength={8}
+        />
+
+        {/* Fecha de nacimiento */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            Fecha de nacimiento
+          </label>
           <input
             type="date"
-            className={input(errores.cliFecNac)}
-            value={form.cliFecNac}
-            onChange={(e) => set("cliFecNac", e.target.value)}
-            max={today()}
+            value={fechaNac}
+            onChange={(e) => {
+              setFechaNac(e.target.value);
+              setErrores((prev) => ({ ...prev, fechaNac: undefined }));
+            }}
+            max={hoy()}
+            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              errores.fechaNac ? "border-red-400" : "border-gray-300"
+            }`}
           />
-        </Campo>
+          {errores.fechaNac && (
+            <p className="text-xs text-red-500 mt-1">{errores.fechaNac}</p>
+          )}
+        </div>
 
-        <Campo label="Parentesco *" error={errores.pareDsc}>
+        {/* Parentesco */}
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            Parentesco
+          </label>
           <select
-            className={input(errores.pareDsc)}
-            value={form.pareDsc}
-            onChange={(e) => set("pareDsc", e.target.value)}
+            value={parentesco}
+            onChange={(e) => {
+              setParentesco(e.target.value);
+              setErrores((prev) => ({ ...prev, parentesco: undefined }));
+            }}
+            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+              errores.parentesco ? "border-red-400" : "border-gray-300"
+            }`}
           >
-            <option value="">Seleccionar...</option>
+            <option value="">Seleccioná...</option>
             {PARENTESCOS.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p} value={p}>
+                {p}
+              </option>
             ))}
           </select>
-        </Campo>
-      </div>
-
-      {/* Fotos DNI */}
-      <div className="border-t border-gray-100 pt-3">
-        <p className="text-xs text-gray-500 mb-2">
-          Foto del DNI <span className="text-gray-400">(opcional pero recomendado)</span>
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          <SubirDNI
-            label="Frente"
-            dni={form.socDocNro}
-            lado="frente"
-            onSubido={setFotoFrentePath}
-          />
-          <SubirDNI
-            label="Dorso"
-            dni={form.socDocNro}
-            lado="dorso"
-            onSubido={setFotoDorsoPath}
-          />
+          {errores.parentesco && (
+            <p className="text-xs text-red-500 mt-1">{errores.parentesco}</p>
+          )}
         </div>
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-2 justify-end pt-1">
+      <div className="flex gap-3 mt-6">
         <button
-          onClick={onCancelar}
-          className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+          onClick={handleGuardar}
+          className="flex-1 bg-blue-600 text-white text-sm font-medium py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Cancelar
+          {esNuevo ? "Agregar" : "Guardar"}
         </button>
         <button
-          onClick={handleSubmit}
-          className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          onClick={onCancelar}
+          className="flex-1 border border-gray-300 text-gray-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          {esEdicion ? "Guardar cambio" : "Agregar familiar"}
+          Cancelar
         </button>
       </div>
     </div>
   );
 }
 
-function input(err) {
-  return `w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500
-    ${err ? "border-red-400 bg-red-50" : "border-gray-300"}`;
-}
+// --- Sub-componentes ---
 
-function Campo({ label, error, children }) {
+function Campo({
+  label,
+  value,
+  onChange,
+  error,
+  placeholder,
+  inputMode,
+  maxLength,
+  autoCapitalize,
+}) {
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1">{label}</label>
-      {children}
+      <label className="block text-sm font-medium text-gray-600 mb-1">
+        {label}
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        inputMode={inputMode}
+        maxLength={maxLength}
+        autoCapitalize={autoCapitalize}
+        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+          error ? "border-red-400" : "border-gray-300"
+        }`}
+      />
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 }
 
-function toInputDate(val) {
-  if (!val) return "";
-  const d = new Date(val);
-  if (isNaN(d)) return "";
-  return d.toISOString().slice(0, 10);
+// --- Helpers ---
+
+function formatearFechaInput(fecha) {
+  if (!fecha) return "";
+  try {
+    // Soporta timestamps Firestore y strings ISO
+    const d = fecha?.toDate ? fecha.toDate() : new Date(fecha);
+    return d.toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
 }
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function hoy() {
+  return new Date().toISOString().split("T")[0];
 }

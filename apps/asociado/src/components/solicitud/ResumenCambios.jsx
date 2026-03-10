@@ -1,91 +1,103 @@
-import { useState } from "react";
+// components/solicitud/ResumenCambios.jsx
+import { useSolicitud } from "../../hooks/useSolicitud";
 
-export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCambio, onEnviar, enviando }) {
-  const [error, setError] = useState(null);
-  const [enviado, setEnviado] = useState(false);
+export default function ResumenCambios({ titular }) {
+  const {
+    cambios,
+    cambiosTitular,
+    hayAlgoCambio,
+    enviando,
+    error,
+    enviarSolicitud,
+  } = useSolicitud(titular);
 
-  const handleEnviar = async () => {
-    setError(null);
-    try {
-      await onEnviar(titular?.cliCod, titular);
-      setEnviado(true);
-    } catch (e) {
-      setError(e.message || "No se pudo enviar la solicitud.");
-    }
-  };
-
-  if (enviado) {
-    return (
-      <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
-        <p className="text-2xl mb-2">✅</p>
-        <p className="font-semibold text-green-800 text-sm">Solicitud enviada</p>
-        <p className="text-xs text-green-600 mt-1">
-          Un empleado de CELTA revisará los cambios y recibirá una notificación al resolver.
-        </p>
-      </div>
-    );
-  }
+  if (!hayAlgoCambio) return null;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-amber-200">
-      <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/50 rounded-t-xl">
-        <h2 className="text-sm font-semibold text-amber-800">
-          Cambios pendientes de envío ({cambios.length})
-        </h2>
-        <p className="text-xs text-amber-600 mt-0.5">
-          Revisá los cambios antes de enviar la solicitud.
-        </p>
-      </div>
-      <ul className="divide-y divide-gray-100">
-        {cambios.map((c, i) => (
-          <li key={i} className="px-4 py-3 flex items-start gap-3">
-            <span className="mt-0.5 text-base">
-              {c.tipo === "agregar" ? "➕" : c.tipo === "eliminar" ? "🗑️" : "✏️"}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800">
-                {etiquetaTipo(c.tipo)}: {c.datos?.socNom ?? "—"}
-              </p>
-              <p className="text-xs text-gray-500">
-                DNI {c.adheridoDni}
-                {c.datos?.pareDsc ? ` · ${c.datos.pareDsc}` : ""}
-              </p>
-              {(c.fotoFrentePath || c.fotoDorsoPath) && (
-                <p className="text-xs text-green-600 mt-0.5">📷 Fotos adjuntas</p>
-              )}
-            </div>
-            <button
-              onClick={() => onQuitarCambio(i)}
-              className="text-xs text-gray-400 hover:text-red-500 shrink-0"
-            >
-              Quitar
-            </button>
-          </li>
-        ))}
-      </ul>
-      {error && (
-        <div className="px-4 pb-3">
-          <p className="text-xs text-red-600">{error}</p>
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mt-6">
+      <h3 className="text-base font-semibold text-amber-800 mb-4">
+        📋 Resumen de cambios a enviar
+      </h3>
+
+      {/* Cambios en datos del titular */}
+      {cambiosTitular && (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">
+            Datos del titular
+          </p>
+          <ul className="space-y-1">
+            {cambiosTitular.celular !== undefined && (
+              <li className="text-sm text-gray-700">
+                <span className="font-medium">Celular:</span>{" "}
+                {cambiosTitular.celular || (
+                  <span className="italic text-gray-400">sin número</span>
+                )}
+              </li>
+            )}
+            {cambiosTitular.facturaElectronica !== undefined && (
+              <li className="text-sm text-gray-700">
+                <span className="font-medium">Factura electrónica:</span>{" "}
+                {cambiosTitular.facturaElectronica ? "Activar" : "Desactivar"}
+              </li>
+            )}
+          </ul>
         </div>
       )}
-      <div className="px-4 py-3 border-t border-gray-100">
-        <button
-          onClick={handleEnviar}
-          disabled={enviando}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
-        >
-          {enviando ? "Enviando..." : "Enviar solicitud de cambios"}
-        </button>
-        <p className="text-xs text-gray-400 text-center mt-2">
-          Los cambios serán revisados por CELTA antes de aplicarse.
+
+      {/* Cambios en adheridos */}
+      {cambios.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">
+            Familiares adheridos
+          </p>
+          <ul className="space-y-2">
+            {cambios.map((c, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                <TipoBadge tipo={c.tipo} />
+                <span>
+                  {c.datos?.socNom ?? `DNI ${c.datos?.socDocNro}`}
+                  {c.datos?.pareDsc && (
+                    <span className="text-gray-400"> · {c.datos.pareDsc}</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">
+          {error}
         </p>
-      </div>
+      )}
+
+      {/* Botón enviar */}
+      <button
+        onClick={enviarSolicitud}
+        disabled={enviando}
+        className="w-full bg-blue-700 text-white text-sm font-semibold py-3 rounded-xl hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {enviando ? "Enviando..." : "Enviar solicitud de cambios"}
+      </button>
+      <p className="text-xs text-amber-700 mt-2 text-center">
+        Un empleado de CELTA revisará y aprobará los cambios.
+      </p>
     </div>
   );
 }
 
-function etiquetaTipo(tipo) {
-  if (tipo === "agregar") return "Agregar familiar";
-  if (tipo === "eliminar") return "Eliminar familiar";
-  return "Modificar familiar";
+function TipoBadge({ tipo }) {
+  const config = {
+    agregar: { label: "Nuevo", color: "bg-green-100 text-green-700" },
+    editar: { label: "Edición", color: "bg-blue-100 text-blue-700" },
+    eliminar: { label: "Baja", color: "bg-red-100 text-red-700" },
+  };
+  const { label, color } = config[tipo] ?? { label: tipo, color: "bg-gray-100 text-gray-600" };
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${color}`}>
+      {label}
+    </span>
+  );
 }
