@@ -4,7 +4,7 @@ import { functions } from "../services/firebase";
 
 const getSignedUrl = httpsCallable(functions, "getSignedUrl");
 
-export default function VisorDNI({ dniTitular, dniAdherido }) {
+export default function VisorDNI({ dniTitular, dniAdherido, lado = "frente", label = "Ver foto DNI" }) {
   const [url, setUrl] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
@@ -15,11 +15,11 @@ export default function VisorDNI({ dniTitular, dniAdherido }) {
     setCargando(true);
     setError(null);
     try {
-      const res = await getSignedUrl({ dniTitular, dniAdherido });
+      const res = await getSignedUrl({ dniTitular, dniAdherido, lado });
       setUrl(res.data.url);
       setAbierto(true);
-    } catch (e) {
-      setError("No se pudo cargar la foto del DNI.");
+    } catch {
+      setError("No se pudo cargar la foto.");
     } finally {
       setCargando(false);
     }
@@ -32,7 +32,7 @@ export default function VisorDNI({ dniTitular, dniAdherido }) {
         disabled={cargando}
         className="text-sm text-blue-700 underline hover:text-blue-900 disabled:text-gray-400"
       >
-        {cargando ? "Cargando foto..." : "Ver foto DNI"}
+        {cargando ? "Cargando..." : `Ver ${label}`}
       </button>
 
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
@@ -47,7 +47,9 @@ export default function VisorDNI({ dniTitular, dniAdherido }) {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold text-gray-700 text-sm">Foto DNI — {dniAdherido}</span>
+              <span className="font-semibold text-gray-700 text-sm">
+                DNI {lado} — {dniAdherido}
+              </span>
               <button
                 onClick={() => setAbierto(false)}
                 className="text-gray-400 hover:text-gray-700 text-xl leading-none"
@@ -57,7 +59,7 @@ export default function VisorDNI({ dniTitular, dniAdherido }) {
             </div>
             <img
               src={url}
-              alt={`DNI de ${dniAdherido}`}
+              alt={`DNI ${lado} de ${dniAdherido}`}
               className="w-full rounded-lg object-contain max-h-96"
             />
           </div>

@@ -4,48 +4,76 @@ import { db } from "../services/firebase";
 import VisorDNI from "./VisorDNI";
 import AccionesRevision from "./AccionesRevision";
 
-const TIPO_LABEL = {
-  alta_adherido:      { label: "Alta de adherido",      color: "bg-blue-100 text-blue-800" },
-  modificacion:       { label: "Modificación",           color: "bg-yellow-100 text-yellow-800" },
-  baja_adherido:      { label: "Baja de adherido",       color: "bg-red-100 text-red-800" },
+const TIPO_META = {
+  agregar:  { label: "Alta de adherido",  color: "bg-blue-100 text-blue-800",   icon: "➕" },
+  editar:   { label: "Modificación",       color: "bg-yellow-100 text-yellow-800", icon: "✏️" },
+  eliminar: { label: "Baja de adherido",   color: "bg-red-100 text-red-800",     icon: "🗑️" },
 };
+
+function formatFecha(val) {
+  if (!val) return "—";
+  const d = new Date(val);
+  if (isNaN(d)) return val;
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
 
 function CampoTabla({ nombre, valor }) {
   return (
     <tr className="border-t border-gray-100">
       <td className="py-1.5 pr-4 text-xs text-gray-500 font-medium w-36">{nombre}</td>
-      <td className="py-1.5 text-sm text-gray-800">{valor ?? "—"}</td>
+      <td className="py-1.5 text-sm text-gray-800">{valor || "—"}</td>
     </tr>
   );
 }
 
 function TarjetaCambio({ cambio, dniTitular }) {
-  const meta = TIPO_LABEL[cambio.tipo] ?? { label: cambio.tipo, color: "bg-gray-100 text-gray-700" };
+  const meta = TIPO_META[cambio.tipo] ?? { label: cambio.tipo, color: "bg-gray-100 text-gray-700", icon: "•" };
+  const d = cambio.datos ?? {};
+  const tieneFoto = !!(cambio.fotoFrentePath || cambio.fotoDorsoPath);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${meta.color}`}>
-          {meta.label}
+          {meta.icon} {meta.label}
         </span>
-        {cambio.tipo !== "baja_adherido" && cambio.socDocNro && (
-          <span className="text-xs text-gray-500">DNI adherido: {cambio.socDocNro}</span>
-        )}
+        <span className="text-xs text-gray-400">DNI adherido: {cambio.adheridoDni ?? d.socDocNro ?? "—"}</span>
       </div>
 
-      <table className="w-full">
-        <tbody>
-          {cambio.socDocNro  && <CampoTabla nombre="DNI"           valor={cambio.socDocNro} />}
-          {cambio.socNom     && <CampoTabla nombre="Nombre"        valor={cambio.socNom} />}
-          {cambio.cliFecNac  && <CampoTabla nombre="Fecha de nac." valor={cambio.cliFecNac} />}
-          {cambio.pareDsc    && <CampoTabla nombre="Parentesco"    valor={cambio.pareDsc} />}
-          {cambio.sumFacFAd  && <CampoTabla nombre="Fecha alta"    valor={cambio.sumFacFAd} />}
-        </tbody>
-      </table>
+      {/* Para bajas solo mostramos el DNI, no hay datos adicionales */}
+      {cambio.tipo === "eliminar" ? (
+        <p className="text-sm text-gray-500 italic">
+          Se solicita dar de baja al adherido con DNI {cambio.adheridoDni}.
+        </p>
+      ) : (
+        <table className="w-full">
+          <tbody>
+            <CampoTabla nombre="Apellido y nombre" valor={d.socNom} />
+            <CampoTabla nombre="DNI"               valor={d.socDocNro} />
+            <CampoTabla nombre="Fecha de nac."     valor={formatFecha(d.cliFecNac)} />
+            <CampoTabla nombre="Parentesco"        valor={d.pareDsc} />
+          </tbody>
+        </table>
+      )}
 
-      {cambio.tieneFoto && cambio.socDocNro && (
-        <div className="mt-3 pt-3 border-t border-gray-100">
-          <VisorDNI dniTitular={dniTitular} dniAdherido={cambio.socDocNro} />
+      {tieneFoto && cambio.adheridoDni && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4">
+          {cambio.fotoFrentePath && (
+            <VisorDNI
+              label="Frente"
+              dniTitular={dniTitular}
+              dniAdherido={cambio.adheridoDni}
+              lado="frente"
+            />
+          )}
+          {cambio.fotoDorsoPath && (
+            <VisorDNI
+              label="Dorso"
+              dniTitular={dniTitular}
+              dniAdherido={cambio.adheridoDni}
+              lado="dorso"
+            />
+          )}
         </div>
       )}
     </div>
@@ -55,7 +83,6 @@ function TarjetaCambio({ cambio, dniTitular }) {
 export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResuelta }) {
   const [sol, setSol] = useState(inicial);
 
-  // Escuchar cambios en tiempo real
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "solicitudes", inicial.id), snap => {
       if (snap.exists()) setSol({ id: snap.id, ...snap.data() });
@@ -71,7 +98,7 @@ export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResue
       <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="text-lg font-bold text-gray-800">Solicitud de DNI {sol.titularDni}</h2>
+            <h2 className="text-lg font-bold text-gray-800">Solicitud — DNI {sol.titularDni}</h2>
             <p className="text-sm text-gray-500 mt-0.5">Código cliente: {sol.clicod}</p>
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-1 ${
