@@ -9,7 +9,6 @@ export function useSolicitud() {
   const auth = getAuth();
   const db = getFirestore();
 
-  // Escuchar solicitud pendiente del asociado en tiempo real
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -63,6 +62,10 @@ export function useSolicitud() {
   const enviarSolicitud = useCallback(async (clicod, datosTitular) => {
     if (cambios.length === 0) return;
     setEnviando(true);
+
+    console.log("datosTitular:", datosTitular);
+    console.log("clicod:", clicod);
+
     try {
       const user = auth.currentUser;
       const tokenResult = await user.getIdTokenResult();
