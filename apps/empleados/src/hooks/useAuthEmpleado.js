@@ -3,9 +3,9 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebas
 import { auth } from "../services/firebase";
 
 export function useAuthEmpleado() {
-  const [user, setUser]     = useState(undefined);
-  const [rol, setRol]       = useState(null);
-  const [error, setError]   = useState(null);
+  const [user, setUser]       = useState(undefined);
+  const [rol, setRol]         = useState(null);
+  const [error, setError]     = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -16,7 +16,7 @@ export function useAuthEmpleado() {
         if (!["empleado", "supervisor"].includes(claims.rol)) {
           await signOut(auth);
           setUser(null); setRol(null);
-          setError("No tenÃ©s permisos para acceder a este panel.");
+          setError("No tenés permisos para acceder a este panel.");
           return;
         }
         setUser(u); setRol(claims.rol);
@@ -28,7 +28,7 @@ export function useAuthEmpleado() {
     setLoading(true); setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-    } catch { setError("Email o contraseÃ±a incorrectos."); }
+    } catch { setError("Email o contraseña incorrectos."); }
     finally { setLoading(false); }
   };
 
