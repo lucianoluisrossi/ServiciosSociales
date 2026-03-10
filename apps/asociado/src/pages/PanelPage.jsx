@@ -13,6 +13,8 @@ export default function PanelPage() {
   const { titular, adheridos, loading, error, recargar } = useAdheridos();
   const { cambios, solicitudActual, agregarCambio, quitarCambio, enviarSolicitud, enviando } = useSolicitud();
 
+  console.log("titular en PanelPage:", titular);
+
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/");
@@ -71,15 +73,12 @@ export default function PanelPage() {
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-10">
-        {/* Estado de solicitud activa */}
         {solicitudActual && (
           <EstadoSolicitud solicitud={solicitudActual} />
         )}
 
-        {/* Datos del titular */}
         <DatosTitular titular={titular} />
 
-        {/* Lista de adheridos */}
         <ListaAdheridos
           adheridos={adheridos}
           cambios={cambios}
@@ -88,7 +87,6 @@ export default function PanelPage() {
           solicitudActiva={false}
         />
 
-        {/* Resumen y envío */}
         {cambios.length > 0 && (
           <ResumenCambios
             cambios={cambios}
