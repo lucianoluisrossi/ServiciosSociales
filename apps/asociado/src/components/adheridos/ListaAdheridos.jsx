@@ -153,11 +153,11 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
               )}
             </div>
 
-            {/* Formulario inline de edición */}
+            {/* Formulario inline de edición — prop corregida: adherido (antes: inicial) */}
             {editando === a.socDocNro && (
               <div className="px-4 pb-4 pt-2 bg-blue-50/30 border-b border-blue-100">
                 <FormAdherido
-                  inicial={a}
+                  adherido={a}
                   onGuardar={handleGuardarEdicion}
                   onCancelar={() => setEditando(null)}
                 />
@@ -170,9 +170,15 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
   );
 }
 
-function formatFecha(str) {
-  if (!str) return "—";
-  const d = new Date(str);
-  if (isNaN(d)) return str;
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+// Fix timezone: parsea la fecha tomando solo la parte YYYY-MM-DD sin convertir a hora local
+function formatFecha(val) {
+  if (!val) return "—";
+  try {
+    const str = val?.toDate ? val.toDate().toISOString() : String(val);
+    const [anio, mes, dia] = str.split("T")[0].split("-");
+    if (!anio || !mes || !dia) return val;
+    return `${dia}/${mes}/${anio}`;
+  } catch {
+    return val;
+  }
 }
