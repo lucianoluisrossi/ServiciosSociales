@@ -10,7 +10,6 @@ export default function LoginPage() {
   const dniValido = /^\d{7,8}$/.test(dni);
   const otpCompleto = otp.join("").length === 6;
 
-  // Countdown reenvío
   useEffect(() => {
     if (paso === "otp") setCountdown(60);
   }, [paso]);
@@ -20,7 +19,6 @@ export default function LoginPage() {
     return () => clearTimeout(t);
   }, [countdown]);
 
-  // Manejo de cajas OTP individuales
   const handleOtpChange = (i, val) => {
     const v = val.replace(/\D/g, "").slice(-1);
     const next = [...otp];
@@ -49,6 +47,11 @@ export default function LoginPage() {
 
       {/* Marca */}
       <div className="mb-8 text-center">
+        <img
+          src="/icons/icon-192.png"
+          alt="CELTA"
+          className="w-24 h-24 mx-auto mb-4 drop-shadow-lg"
+        />
         <div className="w-16 h-16 bg-white/15 border-2 border-white/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <span className="text-3xl">🤝</span>
         </div>
@@ -114,7 +117,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* 6 cajas OTP */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Código de 6 dígitos
