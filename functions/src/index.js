@@ -1,7 +1,5 @@
 ﻿const { initializeApp } = require("firebase-admin/app");
 initializeApp();
-const { crearCuenta } = require("./asociado/crearCuenta");
-exports.crearCuenta = crearCuenta;
 
 const { iniciarSesionAsociado, verificarOTPAsociado } =
   require("./auth/sesionAsociado");
@@ -9,6 +7,8 @@ const { activarCuenta, confirmarActivacion, buscarAsociadoParaActivar } =
   require("./auth/activarCuenta");
 const { obtenerDatosAsociado } =
   require("./asociado/obtenerDatos");
+const { crearCuenta } =
+  require("./asociado/crearCuenta");
 const { resolverSolicitud } =
   require("./solicitudes/resolverSolicitud");
 const { notificarNuevaSolicitud } =
@@ -23,6 +23,7 @@ module.exports = {
   confirmarActivacion,
   buscarAsociadoParaActivar,
   obtenerDatosAsociado,
+  crearCuenta,
   resolverSolicitud,
   notificarNuevaSolicitud,
   getSignedUrl,
