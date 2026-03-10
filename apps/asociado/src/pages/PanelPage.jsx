@@ -49,7 +49,6 @@ export default function PanelPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-
       {/* Header */}
       <header className="bg-blue-700 text-white sticky top-0 z-10 shadow-md">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -72,7 +71,6 @@ export default function PanelPage() {
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-10">
-
         {/* Estado de solicitud activa */}
         {solicitudActual && (
           <EstadoSolicitud solicitud={solicitudActual} />
@@ -95,6 +93,7 @@ export default function PanelPage() {
           <ResumenCambios
             cambios={cambios}
             adheridos={adheridos}
+            titular={titular}
             onQuitarCambio={quitarCambio}
             onEnviar={enviarSolicitud}
             enviando={enviando}

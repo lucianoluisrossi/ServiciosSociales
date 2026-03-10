@@ -1,13 +1,13 @@
 import { useState } from "react";
 
-export default function ResumenCambios({ cambios, adheridos, onQuitarCambio, onEnviar, enviando }) {
+export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCambio, onEnviar, enviando }) {
   const [error, setError] = useState(null);
   const [enviado, setEnviado] = useState(false);
 
   const handleEnviar = async () => {
     setError(null);
     try {
-      await onEnviar();
+      await onEnviar(titular?.cliCod, titular);
       setEnviado(true);
     } catch (e) {
       setError(e.message || "No se pudo enviar la solicitud.");
@@ -36,7 +36,6 @@ export default function ResumenCambios({ cambios, adheridos, onQuitarCambio, onE
           Revisá los cambios antes de enviar la solicitud.
         </p>
       </div>
-
       <ul className="divide-y divide-gray-100">
         {cambios.map((c, i) => (
           <li key={i} className="px-4 py-3 flex items-start gap-3">
@@ -45,16 +44,14 @@ export default function ResumenCambios({ cambios, adheridos, onQuitarCambio, onE
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800">
-                {etiquetaTipo(c.tipo)}: {c.datos?.CliApeContrato ?? "—"}
+                {etiquetaTipo(c.tipo)}: {c.datos?.socNom ?? "—"}
               </p>
               <p className="text-xs text-gray-500">
                 DNI {c.adheridoDni}
-                {c.datos?.PareDsc ? ` · ${c.datos.PareDsc}` : ""}
+                {c.datos?.pareDsc ? ` · ${c.datos.pareDsc}` : ""}
               </p>
               {(c.fotoFrentePath || c.fotoDorsoPath) && (
-                <p className="text-xs text-green-600 mt-0.5">
-                  📷 Fotos adjuntas
-                </p>
+                <p className="text-xs text-green-600 mt-0.5">📷 Fotos adjuntas</p>
               )}
             </div>
             <button
@@ -66,13 +63,11 @@ export default function ResumenCambios({ cambios, adheridos, onQuitarCambio, onE
           </li>
         ))}
       </ul>
-
       {error && (
         <div className="px-4 pb-3">
           <p className="text-xs text-red-600">{error}</p>
         </div>
       )}
-
       <div className="px-4 py-3 border-t border-gray-100">
         <button
           onClick={handleEnviar}

@@ -3,11 +3,10 @@ import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "../services/firebase";
 
 const FILTROS = ["todos", "pendiente", "aprobado", "rechazado"];
-
 const BADGE = {
-  pendiente:  "bg-yellow-100 text-yellow-800",
-  aprobado:   "bg-green-100 text-green-800",
-  rechazado:  "bg-red-100 text-red-800",
+  pendiente: "bg-yellow-100 text-yellow-800",
+  aprobado:  "bg-green-100 text-green-800",
+  rechazado: "bg-red-100 text-red-800",
 };
 
 function formatFecha(ts) {
@@ -18,8 +17,8 @@ function formatFecha(ts) {
 
 export default function ListaSolicitudes({ onSeleccionar }) {
   const [solicitudes, setSolicitudes] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [filtro, setFiltro] = useState("pendiente");
+  const [cargando, setCargando]       = useState(true);
+  const [filtro, setFiltro]           = useState("pendiente");
 
   useEffect(() => {
     const q = query(collection(db, "solicitudes"), orderBy("creadoEn", "desc"));
@@ -40,7 +39,9 @@ export default function ListaSolicitudes({ onSeleccionar }) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-gray-800">Solicitudes</h2>
-        <span className="text-sm text-gray-500">{visibles.length} resultado{visibles.length !== 1 ? "s" : ""}</span>
+        <span className="text-sm text-gray-500">
+          {visibles.length} resultado{visibles.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       {/* Filtros */}
@@ -55,7 +56,9 @@ export default function ListaSolicitudes({ onSeleccionar }) {
                 : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
             }`}
           >
-            {f === "todos" ? `Todas (${solicitudes.length})` : `${f.charAt(0).toUpperCase() + f.slice(1)} (${conteo(f)})`}
+            {f === "todos"
+              ? `Todas (${solicitudes.length})`
+              : `${f.charAt(0).toUpperCase() + f.slice(1)} (${conteo(f)})`}
           </button>
         ))}
       </div>
@@ -80,8 +83,14 @@ export default function ListaSolicitudes({ onSeleccionar }) {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-gray-800">DNI {s.titularDni}</span>
-                    <span className="text-gray-400 text-sm">· Cód. {s.clicod}</span>
+                    <span className="font-semibold text-gray-800">
+                      {s.titular?.titNom ?? `DNI ${s.titularDni}`}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-0.5 flex gap-3 flex-wrap">
+                    <span>DNI {s.titular?.socDocNro ?? s.titularDni}</span>
+                    <span>Cód. {s.clicod}</span>
+                    {s.titular?.sumNro && <span>N° afil. {s.titular.sumNro}</span>}
                   </div>
                   <div className="text-xs text-gray-400 mt-1">{formatFecha(s.creadoEn)}</div>
                   <div className="text-sm text-gray-600 mt-1">

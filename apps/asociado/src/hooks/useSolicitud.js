@@ -6,7 +6,6 @@ export function useSolicitud() {
   const [cambios, setCambios] = useState([]);
   const [solicitudActual, setSolicitudActual] = useState(null);
   const [enviando, setEnviando] = useState(false);
-
   const auth = getAuth();
   const db = getFirestore();
 
@@ -15,11 +14,6 @@ export function useSolicitud() {
     const user = auth.currentUser;
     if (!user) return;
 
-    const dni = user.reloadUserInfo?.customAttributes
-      ? JSON.parse(user.reloadUserInfo.customAttributes).dni
-      : null;
-
-    // Obtener el DNI de los claims
     user.getIdTokenResult().then((tokenResult) => {
       const dniAsociado = tokenResult.claims.dni;
       if (!dniAsociado) return;
@@ -36,7 +30,6 @@ export function useSolicitud() {
         if (!snap.empty) {
           const doc = snap.docs[0];
           const data = { id: doc.id, ...doc.data() };
-          // Solo mostrar si es reciente (últimas 48h) o está pendiente
           const ahora = Date.now();
           const creadoEn = data.creadoEn?.toMillis?.() ?? 0;
           const horas48 = 48 * 60 * 60 * 1000;
@@ -55,9 +48,7 @@ export function useSolicitud() {
   }, [auth.currentUser]);
 
   const agregarCambio = useCallback((cambio) => {
-    // cambio: { tipo: "editar"|"eliminar"|"agregar", adheridoDni, datos }
     setCambios((prev) => {
-      // Reemplazar si ya existe un cambio para el mismo adherido
       const sinDuplicado = prev.filter(
         (c) => !(c.tipo === cambio.tipo && c.adheridoDni === cambio.adheridoDni)
       );
@@ -69,24 +60,27 @@ export function useSolicitud() {
     setCambios((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const enviarSolicitud = useCallback(async (clicod) => {
+  const enviarSolicitud = useCallback(async (clicod, datosTitular) => {
     if (cambios.length === 0) return;
     setEnviando(true);
     try {
       const user = auth.currentUser;
       const tokenResult = await user.getIdTokenResult();
       const dniAsociado = tokenResult.claims.dni;
-
       await addDoc(collection(db, "solicitudes"), {
         titularDni: dniAsociado,
-        clicod: clicod ?? null,
+        clicod:     clicod ?? null,
+        titular: {
+          titNom:    datosTitular?.titNom    ?? null,
+          sumNro:    datosTitular?.sumNro    ?? null,
+          socDocNro: datosTitular?.socDocNro ?? null,
+        },
         cambios,
-        estado: "pendiente",
-        creadoEn: serverTimestamp(),
-        revisadoPor: null,
+        estado:        "pendiente",
+        creadoEn:      serverTimestamp(),
+        revisadoPor:   null,
         motivoRechazo: null,
       });
-
       setCambios([]);
     } catch (e) {
       throw e;
