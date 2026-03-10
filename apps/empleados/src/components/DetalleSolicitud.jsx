@@ -56,23 +56,13 @@ function TarjetaCambio({ cambio, dniTitular }) {
         </table>
       )}
 
-      {tieneFoto && cambio.adheridoDni && (
+      {tieneFoto && (
         <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4">
           {cambio.fotoFrentePath && (
-            <VisorDNI
-              label="Frente"
-              dniTitular={dniTitular}
-              dniAdherido={cambio.adheridoDni}
-              lado="frente"
-            />
+            <VisorDNI path={cambio.fotoFrentePath} label="DNI frente" />
           )}
           {cambio.fotoDorsoPath && (
-            <VisorDNI
-              label="Dorso"
-              dniTitular={dniTitular}
-              dniAdherido={cambio.adheridoDni}
-              lado="dorso"
-            />
+            <VisorDNI path={cambio.fotoDorsoPath} label="DNI dorso" />
           )}
         </div>
       )}

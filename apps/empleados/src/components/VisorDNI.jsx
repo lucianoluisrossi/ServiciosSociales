@@ -4,7 +4,7 @@ import { functions } from "../services/firebase";
 
 const getSignedUrl = httpsCallable(functions, "getSignedUrl");
 
-export default function VisorDNI({ dniTitular, dniAdherido, lado = "frente", label = "Ver foto DNI" }) {
+export default function VisorDNI({ path, label = "foto DNI" }) {
   const [url, setUrl] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ export default function VisorDNI({ dniTitular, dniAdherido, lado = "frente", lab
     setCargando(true);
     setError(null);
     try {
-      const res = await getSignedUrl({ dniTitular, dniAdherido, lado });
+      const res = await getSignedUrl({ path });
       setUrl(res.data.url);
       setAbierto(true);
     } catch {
@@ -47,19 +47,15 @@ export default function VisorDNI({ dniTitular, dniAdherido, lado = "frente", lab
             onClick={e => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold text-gray-700 text-sm">
-                DNI {lado} — {dniAdherido}
-              </span>
+              <span className="font-semibold text-gray-700 text-sm">{label}</span>
               <button
                 onClick={() => setAbierto(false)}
                 className="text-gray-400 hover:text-gray-700 text-xl leading-none"
-              >
-                ✕
-              </button>
+              >✕</button>
             </div>
             <img
               src={url}
-              alt={`DNI ${lado} de ${dniAdherido}`}
+              alt={label}
               className="w-full rounded-lg object-contain max-h-96"
             />
           </div>
