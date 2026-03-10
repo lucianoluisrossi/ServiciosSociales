@@ -1,4 +1,3 @@
-// components/titular/DatosTitular.jsx
 import { useState } from "react";
 
 export default function DatosTitular({ titular, onChange }) {
@@ -8,7 +7,6 @@ export default function DatosTitular({ titular, onChange }) {
     titular?.facturaElectronica ?? false
   );
 
-  // Valores originales para detectar cambios
   const celularOriginal = titular?.celular ?? "";
   const facturaOriginal = titular?.facturaElectronica ?? false;
 
@@ -16,11 +14,7 @@ export default function DatosTitular({ titular, onChange }) {
     celular !== celularOriginal || facturaElectronica !== facturaOriginal;
 
   function handleGuardar() {
-    // Notifica al hook padre (useSolicitud) que hay cambios en el titular
-    onChange?.({
-      celular: celular.trim(),
-      facturaElectronica,
-    });
+    onChange?.({ celular: celular.trim(), facturaElectronica });
     setEditando(false);
   }
 
@@ -33,41 +27,37 @@ export default function DatosTitular({ titular, onChange }) {
   if (!titular) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
-      {/* Encabezado */}
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Encabezado con nombre */}
+      <div className="bg-blue-600 px-4 py-4 flex items-start justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">
-            {titular.titNom}
-          </h2>
-          <p className="text-sm text-gray-500">
-            DNI {titular.socDocNro} · Socio {titular.cliCod}
-          </p>
+          <p className="text-xs text-blue-200 uppercase tracking-wide font-medium mb-0.5">Titular</p>
+          <h2 className="text-lg font-bold text-white leading-tight">{titular.titNom ?? "—"}</h2>
         </div>
         {!editando && (
           <button
             onClick={() => setEditando(true)}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            className="text-xs text-blue-200 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors mt-1"
           >
             Editar
           </button>
         )}
       </div>
 
-      {/* Datos de solo lectura */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <Dato label="N° de contrato" valor={titular.sumNro} />
-        <Dato
-          label="Fecha de alta"
-          valor={formatearFecha(titular.sumFacFAd)}
-        />
+      {/* Grilla de datos fijos */}
+      <div className="grid grid-cols-2 gap-px bg-gray-100">
+        <Dato label="N° Documento"   value={titular.socDocNro} />
+        <Dato label="Cód. Asociado"  value={titular.cliCod} />
+        <Dato label="Cuenta"         value={titular.sumNro} />
+        <Dato label="Fecha Nac."     value={formatFecha(titular.cliFecNac)} />
+        <Dato label="Fecha Adhesión" value={formatFecha(titular.sumFacFAd)} fullWidth />
       </div>
 
       {/* Campos editables */}
-      <div className="border-t border-gray-100 pt-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 border-t border-gray-100">
         {/* Celular */}
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
+          <label className="block text-xs text-gray-400 mb-1 font-medium">
             Número de celular
           </label>
           {editando ? (
@@ -79,10 +69,8 @@ export default function DatosTitular({ titular, onChange }) {
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           ) : (
-            <p className="text-sm text-gray-800">
-              {celular || (
-                <span className="text-gray-400 italic">No registrado</span>
-              )}
+            <p className="text-sm font-semibold text-gray-800">
+              {celular || <span className="text-gray-400 font-normal italic">No registrado</span>}
             </p>
           )}
         </div>
@@ -90,12 +78,8 @@ export default function DatosTitular({ titular, onChange }) {
         {/* Factura electrónica */}
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">
-              Factura electrónica
-            </p>
-            <p className="text-xs text-gray-400">
-              Recibí tu factura por email en lugar de papel
-            </p>
+            <p className="text-xs text-gray-400 font-medium">Factura electrónica</p>
+            <p className="text-xs text-gray-400">Recibí tu factura por email</p>
           </div>
           {editando ? (
             <label className="relative inline-flex items-center cursor-pointer">
@@ -108,13 +92,11 @@ export default function DatosTitular({ titular, onChange }) {
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:bg-blue-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
             </label>
           ) : (
-            <span
-              className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                facturaElectronica
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-            >
+            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+              facturaElectronica
+                ? "bg-green-100 text-green-700"
+                : "bg-gray-100 text-gray-500"
+            }`}>
               {facturaElectronica ? "Activa" : "Inactiva"}
             </span>
           )}
@@ -123,7 +105,7 @@ export default function DatosTitular({ titular, onChange }) {
 
       {/* Botones */}
       {editando && (
-        <div className="flex gap-3 mt-5">
+        <div className="flex gap-3 px-4 pb-4">
           <button
             onClick={handleGuardar}
             disabled={!hayCambios}
@@ -140,9 +122,9 @@ export default function DatosTitular({ titular, onChange }) {
         </div>
       )}
 
-      {/* Aviso de cambios pendientes */}
+      {/* Aviso cambios pendientes */}
       {!editando && hayCambios && (
-        <p className="mt-3 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+        <p className="mx-4 mb-4 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
           ✏️ Hay cambios pendientes de envío en tus datos.
         </p>
       )}
@@ -150,24 +132,24 @@ export default function DatosTitular({ titular, onChange }) {
   );
 }
 
-function Dato({ label, valor }) {
+function Dato({ label, value, fullWidth }) {
   return (
-    <div>
+    <div className={`bg-white px-4 py-3 ${fullWidth ? "col-span-2" : ""}`}>
       <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className="text-sm font-medium text-gray-800">{valor ?? "—"}</p>
+      <p className="text-sm font-semibold text-gray-800">{value ?? "—"}</p>
     </div>
   );
 }
 
-function formatearFecha(fecha) {
-  if (!fecha) return "—";
+// Fix timezone: parsea la fecha tomando solo la parte YYYY-MM-DD sin convertir a hora local
+function formatFecha(val) {
+  if (!val) return "—";
   try {
-    return new Date(fecha).toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    const str = val?.toDate ? val.toDate().toISOString() : String(val);
+    const [anio, mes, dia] = str.split("T")[0].split("-");
+    if (!anio || !mes || !dia) return val;
+    return `${dia}/${mes}/${anio}`;
   } catch {
-    return fecha;
+    return val;
   }
 }

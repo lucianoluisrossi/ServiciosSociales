@@ -1,11 +1,8 @@
-// components/adheridos/FormAdherido.jsx
 import { useState } from "react";
 
 /**
  * La API devuelve SocNom como "APELLIDO NOMBRE" (todo mayúsculas, concatenado).
  * Estrategia de split: la primera palabra es el apellido, el resto es el nombre.
- * Esto funciona bien para apellidos simples. Para apellidos compuestos el empleado
- * podrá corregirlo al revisar la solicitud.
  */
 function splitNombreApellido(socNom = "") {
   const partes = socNom.trim().split(/\s+/);
@@ -32,9 +29,7 @@ export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
   const [apellido, setApellido] = useState(inicial.apellido);
   const [nombre, setNombre] = useState(inicial.nombre);
   const [dni, setDni] = useState(adherido?.socDocNro ?? "");
-  const [fechaNac, setFechaNac] = useState(
-    formatearFechaInput(adherido?.cliFecNac)
-  );
+  const [fechaNac, setFechaNac] = useState(formatearFechaInput(adherido?.cliFecNac));
   const [parentesco, setParentesco] = useState(adherido?.pareDsc ?? "");
   const [errores, setErrores] = useState({});
 
@@ -59,14 +54,12 @@ export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
     }
 
     onGuardar({
-      // Guardamos apellido y nombre separados + el campo original reconstruido
       apellido: apellido.trim().toUpperCase(),
       nombre: nombre.trim().toUpperCase(),
       socNom: `${apellido.trim().toUpperCase()} ${nombre.trim().toUpperCase()}`,
       socDocNro: dni.trim(),
       cliFecNac: fechaNac,
       pareDsc: parentesco,
-      // Si es edición, preservar el ID original
       ...(adherido?.id ? { id: adherido.id } : {}),
     });
   }
@@ -187,23 +180,10 @@ export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
   );
 }
 
-// --- Sub-componentes ---
-
-function Campo({
-  label,
-  value,
-  onChange,
-  error,
-  placeholder,
-  inputMode,
-  maxLength,
-  autoCapitalize,
-}) {
+function Campo({ label, value, onChange, error, placeholder, inputMode, maxLength, autoCapitalize }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-600 mb-1">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
       <input
         type="text"
         value={value}
@@ -221,14 +201,12 @@ function Campo({
   );
 }
 
-// --- Helpers ---
-
+// Fix timezone: extrae YYYY-MM-DD del string ISO sin convertir a hora local
 function formatearFechaInput(fecha) {
   if (!fecha) return "";
   try {
-    // Soporta timestamps Firestore y strings ISO
-    const d = fecha?.toDate ? fecha.toDate() : new Date(fecha);
-    return d.toISOString().split("T")[0];
+    const str = fecha?.toDate ? fecha.toDate().toISOString() : String(fecha);
+    return str.split("T")[0];
   } catch {
     return "";
   }
