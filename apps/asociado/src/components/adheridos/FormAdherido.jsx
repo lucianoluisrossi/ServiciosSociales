@@ -1,217 +1,206 @@
 import { useState } from "react";
+import SubirDNI from "./SubirDNI";
+
+const PARENTESCOS = [
+  "Cónyuge", "Hijo/a", "Padre", "Madre", "Hermano/a",
+  "Abuelo/a", "Nieto/a", "Suegro/a", "Cuñado/a", "Otro",
+];
 
 /**
- * La API devuelve SocNom como "APELLIDO NOMBRE" (todo mayúsculas, concatenado).
- * Estrategia de split: la primera palabra es el apellido, el resto es el nombre.
+ * La API devuelve socNom como "APELLIDO NOMBRE" (concatenado).
+ * Estrategia: primera palabra = apellido, resto = nombre.
  */
-function splitNombreApellido(socNom = "") {
+function splitApellidoNombre(socNom = "") {
   const partes = socNom.trim().split(/\s+/);
   if (partes.length === 0) return { apellido: "", nombre: "" };
   if (partes.length === 1) return { apellido: partes[0], nombre: "" };
-  return {
-    apellido: partes[0],
-    nombre: partes.slice(1).join(" "),
-  };
+  return { apellido: partes[0], nombre: partes.slice(1).join(" ") };
 }
 
-const PARENTESCOS = [
-  "Cónyuge",
-  "Hijo/a",
-  "Padre",
-  "Madre",
-  "Hermano/a",
-  "Otro",
-];
-
 export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
-  const inicial = splitNombreApellido(adherido?.socNom);
+  const split = splitApellidoNombre(adherido?.socNom);
 
-  const [apellido, setApellido] = useState(inicial.apellido);
-  const [nombre, setNombre] = useState(inicial.nombre);
-  const [dni, setDni] = useState(adherido?.socDocNro ?? "");
-  const [fechaNac, setFechaNac] = useState(formatearFechaInput(adherido?.cliFecNac));
-  const [parentesco, setParentesco] = useState(adherido?.pareDsc ?? "");
+  const [apellido, setApellido] = useState(split.apellido);
+  const [nombre, setNombre]     = useState(split.nombre);
+  const [form, setForm] = useState({
+    socDocNro: adherido?.socDocNro ?? "",
+    cliFecNac: toInputDate(adherido?.cliFecNac),
+    pareDsc:   adherido?.pareDsc   ?? "",
+  });
+  const [fotoFrentePath, setFotoFrentePath] = useState(null);
+  const [fotoDorsoPath,  setFotoDorsoPath]  = useState(null);
   const [errores, setErrores] = useState({});
 
-  const esNuevo = !adherido;
+  const esEdicion = !!adherido;
 
-  function validar() {
+  const set = (campo, val) => {
+    setForm((prev) => ({ ...prev, [campo]: val }));
+    setErrores((prev) => ({ ...prev, [campo]: null }));
+  };
+
+  const validar = () => {
     const e = {};
-    if (!apellido.trim()) e.apellido = "El apellido es obligatorio.";
-    if (!nombre.trim()) e.nombre = "El nombre es obligatorio.";
-    if (!dni.trim() || !/^\d{7,8}$/.test(dni.trim()))
-      e.dni = "Ingresá un DNI válido (7 u 8 dígitos).";
-    if (!fechaNac) e.fechaNac = "La fecha de nacimiento es obligatoria.";
-    if (!parentesco) e.parentesco = "Seleccioná un parentesco.";
+    if (!apellido.trim()) e.apellido = "Requerido";
+    if (!nombre.trim())   e.nombre   = "Requerido";
+    if (!form.socDocNro.trim() || !/^\d{7,8}$/.test(form.socDocNro.trim()))
+      e.socDocNro = "DNI inválido (7-8 dígitos)";
+    if (!form.cliFecNac) e.cliFecNac = "Requerida";
+    if (!form.pareDsc)   e.pareDsc   = "Requerido";
     return e;
-  }
+  };
 
-  function handleGuardar() {
+  const handleSubmit = () => {
     const e = validar();
-    if (Object.keys(e).length > 0) {
-      setErrores(e);
-      return;
-    }
+    if (Object.keys(e).length > 0) { setErrores(e); return; }
 
-    onGuardar({
-      apellido: apellido.trim().toUpperCase(),
-      nombre: nombre.trim().toUpperCase(),
-      socNom: `${apellido.trim().toUpperCase()} ${nombre.trim().toUpperCase()}`,
-      socDocNro: dni.trim(),
-      cliFecNac: fechaNac,
-      pareDsc: parentesco,
-      ...(adherido?.id ? { id: adherido.id } : {}),
-    });
-  }
+    const socNom = `${apellido.trim().toUpperCase()} ${nombre.trim().toUpperCase()}`;
+
+    onGuardar(
+      {
+        apellido: apellido.trim().toUpperCase(),
+        nombre:   nombre.trim().toUpperCase(),
+        socNom,
+        socDocNro: form.socDocNro.trim(),
+        cliFecNac: form.cliFecNac,
+        pareDsc:   form.pareDsc,
+      },
+      fotoFrentePath ?? null,  // nunca undefined
+      fotoDorsoPath  ?? null   // nunca undefined
+    );
+  };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-      <h3 className="text-base font-semibold text-gray-800 mb-4">
-        {esNuevo ? "Agregar familiar" : "Editar familiar"}
-      </h3>
-
-      <div className="space-y-4">
-        {/* Apellido y Nombre en fila */}
-        <div className="grid grid-cols-2 gap-3">
-          <Campo
-            label="Apellido"
+    <div className="space-y-3">
+      {/* Apellido y Nombre separados */}
+      <div className="grid grid-cols-2 gap-3">
+        <Campo label="Apellido *" error={errores.apellido}>
+          <input
+            className={input(errores.apellido)}
             value={apellido}
-            onChange={(v) => {
-              setApellido(v);
-              setErrores((e) => ({ ...e, apellido: undefined }));
+            onChange={(e) => {
+              setApellido(e.target.value);
+              setErrores((prev) => ({ ...prev, apellido: null }));
             }}
-            error={errores.apellido}
             placeholder="GARCÍA"
             autoCapitalize="characters"
           />
-          <Campo
-            label="Nombre/s"
+        </Campo>
+
+        <Campo label="Nombre/s *" error={errores.nombre}>
+          <input
+            className={input(errores.nombre)}
             value={nombre}
-            onChange={(v) => {
-              setNombre(v);
-              setErrores((e) => ({ ...e, nombre: undefined }));
+            onChange={(e) => {
+              setNombre(e.target.value);
+              setErrores((prev) => ({ ...prev, nombre: null }));
             }}
-            error={errores.nombre}
             placeholder="JUAN CARLOS"
             autoCapitalize="characters"
           />
-        </div>
+        </Campo>
 
-        {/* DNI */}
-        <Campo
-          label="DNI"
-          value={dni}
-          onChange={(v) => {
-            setDni(v);
-            setErrores((e) => ({ ...e, dni: undefined }));
-          }}
-          error={errores.dni}
-          placeholder="12345678"
-          inputMode="numeric"
-          maxLength={8}
-        />
+        <Campo label="DNI *" error={errores.socDocNro}>
+          <input
+            className={input(errores.socDocNro)}
+            value={form.socDocNro}
+            onChange={(e) => set("socDocNro", e.target.value)}
+            placeholder="12345678"
+            inputMode="numeric"
+            maxLength={8}
+            disabled={esEdicion}
+          />
+        </Campo>
 
-        {/* Fecha de nacimiento */}
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Fecha de nacimiento
-          </label>
+        <Campo label="Fecha de nacimiento *" error={errores.cliFecNac}>
           <input
             type="date"
-            value={fechaNac}
-            onChange={(e) => {
-              setFechaNac(e.target.value);
-              setErrores((prev) => ({ ...prev, fechaNac: undefined }));
-            }}
-            max={hoy()}
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errores.fechaNac ? "border-red-400" : "border-gray-300"
-            }`}
+            className={input(errores.cliFecNac)}
+            value={form.cliFecNac}
+            onChange={(e) => set("cliFecNac", e.target.value)}
+            max={today()}
           />
-          {errores.fechaNac && (
-            <p className="text-xs text-red-500 mt-1">{errores.fechaNac}</p>
-          )}
-        </div>
+        </Campo>
 
-        {/* Parentesco */}
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Parentesco
-          </label>
+        <Campo label="Parentesco *" error={errores.pareDsc} fullWidth>
           <select
-            value={parentesco}
-            onChange={(e) => {
-              setParentesco(e.target.value);
-              setErrores((prev) => ({ ...prev, parentesco: undefined }));
-            }}
-            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errores.parentesco ? "border-red-400" : "border-gray-300"
-            }`}
+            className={input(errores.pareDsc)}
+            value={form.pareDsc}
+            onChange={(e) => set("pareDsc", e.target.value)}
           >
-            <option value="">Seleccioná...</option>
+            <option value="">Seleccionar...</option>
             {PARENTESCOS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </select>
-          {errores.parentesco && (
-            <p className="text-xs text-red-500 mt-1">{errores.parentesco}</p>
-          )}
+        </Campo>
+      </div>
+
+      {/* Fotos DNI */}
+      <div className="border-t border-gray-100 pt-3">
+        <p className="text-xs text-gray-500 mb-2">
+          Foto del DNI <span className="text-gray-400">(opcional pero recomendado)</span>
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <SubirDNI
+            label="Frente"
+            dni={form.socDocNro}
+            lado="frente"
+            onSubido={setFotoFrentePath}
+          />
+          <SubirDNI
+            label="Dorso"
+            dni={form.socDocNro}
+            lado="dorso"
+            onSubido={setFotoDorsoPath}
+          />
         </div>
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-3 mt-6">
-        <button
-          onClick={handleGuardar}
-          className="flex-1 bg-blue-600 text-white text-sm font-medium py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          {esNuevo ? "Agregar" : "Guardar"}
-        </button>
+      <div className="flex gap-2 justify-end pt-1">
         <button
           onClick={onCancelar}
-          className="flex-1 border border-gray-300 text-gray-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
         >
           Cancelar
+        </button>
+        <button
+          onClick={handleSubmit}
+          className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          {esEdicion ? "Guardar cambio" : "Agregar familiar"}
         </button>
       </div>
     </div>
   );
 }
 
-function Campo({ label, value, onChange, error, placeholder, inputMode, maxLength, autoCapitalize }) {
+function input(err) {
+  return `w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500
+    ${err ? "border-red-400 bg-red-50" : "border-gray-300"}`;
+}
+
+function Campo({ label, error, children, fullWidth }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        inputMode={inputMode}
-        maxLength={maxLength}
-        autoCapitalize={autoCapitalize}
-        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-          error ? "border-red-400" : "border-gray-300"
-        }`}
-      />
+    <div className={fullWidth ? "col-span-2" : ""}>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      {children}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );
 }
 
-// Fix timezone: extrae YYYY-MM-DD del string ISO sin convertir a hora local
-function formatearFechaInput(fecha) {
-  if (!fecha) return "";
+// Fix timezone: extrae YYYY-MM-DD sin conversión a hora local
+function toInputDate(val) {
+  if (!val) return "";
   try {
-    const str = fecha?.toDate ? fecha.toDate().toISOString() : String(fecha);
+    const str = val?.toDate ? val.toDate().toISOString() : String(val);
     return str.split("T")[0];
   } catch {
     return "";
   }
 }
 
-function hoy() {
+function today() {
   return new Date().toISOString().split("T")[0];
 }
