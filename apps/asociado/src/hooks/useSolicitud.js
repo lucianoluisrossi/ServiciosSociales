@@ -12,9 +12,22 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
+/**
+ * Reemplaza recursivamente todos los valores `undefined` por `null`
+ * para que Firestore no rechace el documento.
+ */
+function sanitizar(obj) {
+  if (obj === undefined) return null;
+  if (obj === null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizar);
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, sanitizar(v)])
+  );
+}
+
 export function useSolicitud(titular) {
   const [cambios, setCambios] = useState([]);
-  const [cambiosTitular, setCambiosTitular] = useState(null); // { celular, facturaElectronica }
+  const [cambiosTitular, setCambiosTitular] = useState(null);
   const [solicitudActual, setSolicitudActual] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -93,7 +106,7 @@ export function useSolicitud(titular) {
         const tokenResult = await user.getIdTokenResult();
         const dniAsociado = tokenResult.claims.dni;
 
-        await addDoc(collection(db, "solicitudes"), {
+        const payload = sanitizar({
           titularDni: dniAsociado,
           clicod: clicod ?? null,
           titular: {
@@ -102,7 +115,6 @@ export function useSolicitud(titular) {
             socDocNro: datosTitular?.socDocNro ?? null,
           },
           cambios,
-          // Solo incluir cambiosTitular si existe
           ...(cambiosTitular
             ? {
                 cambiosTitular: {
@@ -119,6 +131,8 @@ export function useSolicitud(titular) {
           revisadoPor: null,
           motivoRechazo: null,
         });
+
+        await addDoc(collection(db, "solicitudes"), payload);
 
         setCambios([]);
         setCambiosTitular(null);
