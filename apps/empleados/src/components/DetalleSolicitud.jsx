@@ -90,6 +90,16 @@ export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResue
           <div>
             <h2 className="text-lg font-bold text-gray-800">Solicitud — DNI {sol.titularDni}</h2>
             <p className="text-sm text-gray-500 mt-0.5">Código cliente: {sol.clicod}</p>
+            {sol.celularContacto?.completo ? (
+              <a
+                href={`tel:${sol.celularContacto.completo}`}
+                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 mt-1"
+              >
+                📱 {sol.celularContacto.codArea} {sol.celularContacto.numero}
+              </a>
+            ) : (
+              <p className="text-sm text-gray-400 mt-1">📱 Sin celular de contacto</p>
+            )}
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-1 ${
             sol.estado === "pendiente" ? "bg-yellow-100 text-yellow-800" :

@@ -59,12 +59,9 @@ export function useSolicitud() {
     setCambios((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const enviarSolicitud = useCallback(async (clicod, datosTitular) => {
+  const enviarSolicitud = useCallback(async (clicod, datosTitular, contacto) => {
     if (cambios.length === 0) return;
     setEnviando(true);
-
-    console.log("datosTitular:", datosTitular);
-    console.log("clicod:", clicod);
 
     try {
       const user = auth.currentUser;
@@ -77,6 +74,12 @@ export function useSolicitud() {
           titNom:    datosTitular?.titNom    ?? null,
           sumNro:    datosTitular?.sumNro    ?? null,
           socDocNro: datosTitular?.socDocNro ?? null,
+        },
+        celularContacto: {
+          codArea: contacto?.codArea ?? null,
+          numero:  contacto?.celular ?? null,
+          // Número completo en formato Argentina para facilitar el uso desde el panel
+          completo: contacto ? `+549${contacto.codArea}${contacto.celular}` : null,
         },
         cambios,
         estado:        "pendiente",
