@@ -88,7 +88,7 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
       {/* Celular de contacto */}
       <div className="px-4 py-3 border-t border-gray-100 space-y-2">
         <p className="text-xs font-medium text-gray-600">
-          📱 Celular de contacto <span className="text-red-500">*</span>
+          📱 Dejanos tu celular para poder estar en contacto <span className="text-red-500">*</span>
         </p>
         <div className="flex gap-2 items-start">
           {/* Código de área */}
