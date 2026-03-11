@@ -4,22 +4,16 @@ const { defineSecret } = require("firebase-functions/params");
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-haiku-4-5-20251001"; // rápido y económico
+const MODEL = "claude-haiku-4-5-20251001";
 
 /**
  * validarFotoDNI
  *
- * Recibe una imagen en base64 y valida con IA si corresponde
- * al frente o dorso de un DNI argentino.
+ * Valida si la imagen es un DNI argentino.
+ * Si es el frente y es válido, además extrae nombre, DNI y fecha de nacimiento.
  *
- * Request data:
- *   { imagenBase64: string, mediaType: string, lado: "frente" | "dorso" }
- *
- * Response:
- *   { esValido: boolean, motivo: string }
- *
- * Solo accesible por usuarios con rol "asociado".
- * Rate limit implícito: Firebase onCall + 1 llamada por imagen.
+ * Request:  { imagenBase64: string, mediaType: string, lado: "frente" | "dorso" }
+ * Response: { esValido: boolean, motivo: string, datos?: { socNom, socDocNro, cliFecNac } }
  */
 exports.validarFotoDNI = onCall(
   {
@@ -30,19 +24,15 @@ exports.validarFotoDNI = onCall(
       "http://localhost:5173",
       "http://localhost:5174",
     ],
-    // Limitar tamaño del request: imágenes base64 pueden ser grandes
-    // Firebase tiene un límite de 10MB por defecto en onCall
     timeoutSeconds: 30,
   },
   async ({ auth: reqAuth, data }) => {
-    // ── Autenticación: solo asociados ──────────────────────────────────────
     if (!reqAuth || reqAuth.token.rol !== "asociado") {
       throw new HttpsError("permission-denied", "No autorizado");
     }
 
     const { imagenBase64, mediaType, lado } = data;
 
-    // ── Validación de parámetros ───────────────────────────────────────────
     if (!imagenBase64 || typeof imagenBase64 !== "string") {
       throw new HttpsError("invalid-argument", "imagenBase64 requerido");
     }
@@ -54,24 +44,42 @@ exports.validarFotoDNI = onCall(
       ? mediaType
       : "image/jpeg";
 
-    // ── Prompt ────────────────────────────────────────────────────────────
-    const ladoTexto = lado === "frente"
-      ? "el frente (cara con foto, nombre completo y número de DNI)"
-      : "el dorso (cara con código de barras o información adicional)";
+    // ── Prompt: distinto según lado ───────────────────────────────────────
+    const prompt = lado === "frente"
+      ? `Analizá esta imagen del frente de un DNI argentino.
 
-    const prompt = `Analizá esta imagen y determiná si muestra claramente ${ladoTexto} de un Documento Nacional de Identidad (DNI) argentino.
+Respondé ÚNICAMENTE con un objeto JSON, sin texto adicional:
 
-Respondé ÚNICAMENTE con un objeto JSON con este formato exacto, sin texto adicional:
+Si la imagen NO es válida:
+{"esValido": false, "motivo": "descripción breve del problema"}
+
+Si la imagen ES válida, extraé también los datos del documento:
+{"esValido": true, "motivo": "ok", "datos": {"socNom": "APELLIDO NOMBRE", "socDocNro": "12345678", "cliFecNac": "YYYY-MM-DD"}}
+
+Criterios para rechazar:
+- No es el frente de un DNI argentino
+- Imagen muy borrosa o con mala iluminación
+- DNI no completamente visible o muy recortado
+- Imagen rotada más de 45 grados
+
+Para la extracción de datos:
+- socNom: apellido y nombre tal como figura en el DNI, en mayúsculas
+- socDocNro: solo los dígitos del número de DNI, sin puntos ni espacios
+- cliFecNac: fecha de nacimiento en formato YYYY-MM-DD (ej: 1990-05-23)
+- Si no podés leer algún dato con certeza, poné null en ese campo`
+
+      : `Analizá esta imagen y determiná si muestra claramente el dorso de un Documento Nacional de Identidad (DNI) argentino.
+
+Respondé ÚNICAMENTE con un objeto JSON, sin texto adicional:
 {"esValido": true, "motivo": "descripción breve"}
 o
 {"esValido": false, "motivo": "descripción breve del problema"}
 
 Criterios para rechazar:
-- No es un DNI argentino (es otro documento, una foto de persona, paisaje, selfie, etc.)
-- La imagen está muy borrosa o tiene mala iluminación
-- El DNI no está completamente visible o está muy recortado
-- Es el lado incorrecto (se pide ${lado} pero se ve el otro lado)
-- La imagen está rotada más de 45 grados`;
+- No es el dorso de un DNI argentino
+- Imagen muy borrosa o con mala iluminación
+- DNI no completamente visible o muy recortado
+- Imagen rotada más de 45 grados`;
 
     // ── Llamada a Anthropic ────────────────────────────────────────────────
     let response;
@@ -85,18 +93,14 @@ Criterios para rechazar:
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 150,
+          max_tokens: 300,
           messages: [
             {
               role: "user",
               content: [
                 {
                   type: "image",
-                  source: {
-                    type: "base64",
-                    media_type: tipoImagen,
-                    data: imagenBase64,
-                  },
+                  source: { type: "base64", media_type: tipoImagen, data: imagenBase64 },
                 },
                 { type: "text", text: prompt },
               ],
@@ -106,22 +110,15 @@ Criterios para rechazar:
       });
     } catch (err) {
       console.error("Error conectando con Anthropic:", err);
-      throw new HttpsError(
-        "unavailable",
-        "El servicio de validación no está disponible. Intentá más tarde."
-      );
+      throw new HttpsError("unavailable", "El servicio de validación no está disponible. Intentá más tarde.");
     }
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
       console.error(`Anthropic respondió ${response.status}:`, errorBody);
-      throw new HttpsError(
-        "unavailable",
-        "El servicio de validación devolvió un error. Intentá más tarde."
-      );
+      throw new HttpsError("unavailable", "El servicio de validación devolvió un error. Intentá más tarde.");
     }
 
-    // ── Parsear respuesta ──────────────────────────────────────────────────
     const anthropicData = await response.json();
     const texto = anthropicData.content?.[0]?.text ?? "";
 
@@ -129,20 +126,26 @@ Criterios para rechazar:
       const clean = texto.replace(/```json|```/g, "").trim();
       const resultado = JSON.parse(clean);
 
-      if (typeof resultado.esValido !== "boolean") {
-        throw new Error("Formato inesperado");
+      if (typeof resultado.esValido !== "boolean") throw new Error("Formato inesperado");
+
+      if (!resultado.esValido) {
+        return { esValido: false, motivo: resultado.motivo ?? "" };
       }
 
-      return {
-        esValido: resultado.esValido,
-        motivo: resultado.motivo ?? "",
-      };
+      // Válido — devolver datos extraídos si es el frente
+      const respuesta = { esValido: true, motivo: resultado.motivo ?? "ok" };
+      if (lado === "frente" && resultado.datos) {
+        respuesta.datos = {
+          socNom:    resultado.datos.socNom    ?? null,
+          socDocNro: resultado.datos.socDocNro ?? null,
+          cliFecNac: resultado.datos.cliFecNac ?? null,
+        };
+      }
+      return respuesta;
+
     } catch (parseErr) {
       console.error("No se pudo parsear respuesta de Anthropic:", texto);
-      throw new HttpsError(
-        "internal",
-        "Respuesta inesperada del validador. Intentá de nuevo."
-      );
+      throw new HttpsError("internal", "Respuesta inesperada del validador. Intentá de nuevo.");
     }
   }
 );

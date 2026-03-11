@@ -7,12 +7,13 @@ import { useToast } from "../ui/Toast";
 /**
  * SubirDNI
  * Props:
- *   label    string   "Frente" | "Dorso"
- *   dni      string   DNI del adherido
- *   lado     string   "frente" | "dorso"
- *   onSubido fn(path) Callback con el path de Storage cuando la foto es válida y subida
+ *   label              string    "Frente" | "Dorso"
+ *   dni                string    DNI del adherido
+ *   lado               string    "frente" | "dorso"
+ *   onSubido           fn(path)  Callback con el path de Storage
+ *   onDatosExtraidos   fn(datos) Solo para lado="frente": { socNom, socDocNro, cliFecNac }
  */
-export default function SubirDNI({ label, dni, lado, onSubido }) {
+export default function SubirDNI({ label, dni, lado, onSubido, onDatosExtraidos }) {
   const [estado, setEstado] = useState("idle"); // idle | validando | subiendo | ok | error
   const [preview, setPreview] = useState(null);
   const inputRef = useRef();
@@ -23,21 +24,17 @@ export default function SubirDNI({ label, dni, lado, onSubido }) {
   const handleChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    // Reset input para permitir re-selección del mismo archivo
     e.target.value = "";
 
-    // Preview optimista
     const previewUrl = URL.createObjectURL(file);
     setPreview(previewUrl);
     setEstado("validando");
 
-    // ── Paso 1 + 2: heurísticas + IA ──────────────────────────────────────
+    // ── Validación + extracción ────────────────────────────────────────────
     let resultado;
     try {
       resultado = await validar(file, lado);
     } catch (err) {
-      // IA no disponible → bloqueamos (política del proyecto)
       console.error("Validador no disponible:", err);
       setEstado("error");
       setPreview(null);
@@ -55,7 +52,12 @@ export default function SubirDNI({ label, dni, lado, onSubido }) {
       return;
     }
 
-    // ── Paso 3: subir a Storage ────────────────────────────────────────────
+    // Si es el frente y hay datos extraídos, notificar al padre
+    if (lado === "frente" && resultado.datos && onDatosExtraidos) {
+      onDatosExtraidos(resultado.datos);
+    }
+
+    // ── Subir a Storage ────────────────────────────────────────────────────
     setEstado("subiendo");
     try {
       const auth = getAuth();
@@ -76,8 +78,6 @@ export default function SubirDNI({ label, dni, lado, onSubido }) {
       toast("No se pudo subir la foto. Verificá tu conexión e intentá de nuevo.", "error");
     }
   };
-
-  const puedeReintentar = estado === "error" || estado === "ok";
 
   return (
     <>
@@ -109,13 +109,8 @@ export default function SubirDNI({ label, dni, lado, onSubido }) {
           }
         `}
       >
-        {/* Preview o ícono de estado */}
         {preview && estado === "ok" ? (
-          <img
-            src={preview}
-            alt={label}
-            className="h-16 w-full object-cover rounded-lg"
-          />
+          <img src={preview} alt={label} className="h-16 w-full object-cover rounded-lg" />
         ) : (
           <span className="text-2xl">
             {(estado === "validando" || estado === "subiendo") && <Spinner />}
@@ -125,7 +120,6 @@ export default function SubirDNI({ label, dni, lado, onSubido }) {
           </span>
         )}
 
-        {/* Texto de estado */}
         <span className={`font-medium ${
           estado === "ok"    ? "text-green-700" :
           estado === "error" ? "text-red-600"   :
@@ -138,13 +132,12 @@ export default function SubirDNI({ label, dni, lado, onSubido }) {
           {estado === "idle"      && `${label} del DNI`}
         </span>
 
-        {/* Sub-texto según estado */}
         {(estado === "validando" || estado === "subiendo") && (
           <span className="text-gray-400 text-xs">
-            {estado === "validando" ? "Comprobando documento..." : "Guardando imagen..."}
+            {estado === "validando" ? "Leyendo documento..." : "Guardando imagen..."}
           </span>
         )}
-        {puedeReintentar && estado !== "ok" && (
+        {estado === "error" && (
           <span className="text-gray-400 text-xs">Tocá para elegir otra foto</span>
         )}
       </button>
@@ -154,12 +147,7 @@ export default function SubirDNI({ label, dni, lado, onSubido }) {
 
 function Spinner() {
   return (
-    <svg
-      className="animate-spin text-blue-500 w-6 h-6"
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
+    <svg className="animate-spin text-blue-500 w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor"
         d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
