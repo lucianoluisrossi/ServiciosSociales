@@ -1,4 +1,4 @@
-﻿const { initializeApp } = require("firebase-admin/app");
+const { initializeApp } = require("firebase-admin/app");
 initializeApp();
 
 const { iniciarSesionAsociado, verificarOTPAsociado } =
@@ -15,6 +15,8 @@ const { notificarNuevaSolicitud } =
   require("./solicitudes/notificarNuevaSolicitud");
 const { getSignedUrl } =
   require("./storage/getSignedUrl");
+const { validarFotoDNI } =
+  require("./storage/validarFotoDNI");
 
 module.exports = {
   iniciarSesionAsociado,
@@ -27,4 +29,5 @@ module.exports = {
   resolverSolicitud,
   notificarNuevaSolicitud,
   getSignedUrl,
+  validarFotoDNI,
 };
