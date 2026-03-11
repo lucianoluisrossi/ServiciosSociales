@@ -1,14 +1,6 @@
 import { useState } from "react";
 
-export default function ResumenCambios({
-  cambios,
-  cambiosTitular,
-  adheridos,
-  titular,
-  onQuitarCambio,
-  onEnviar,
-  enviando,
-}) {
+export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCambio, onEnviar, enviando }) {
   const [error, setError] = useState(null);
   const [enviado, setEnviado] = useState(false);
 
@@ -22,15 +14,13 @@ export default function ResumenCambios({
     }
   };
 
-  const totalCambios = cambios.length + (cambiosTitular ? 1 : 0);
-
   if (enviado) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
         <p className="text-2xl mb-2">✅</p>
         <p className="font-semibold text-green-800 text-sm">Solicitud enviada</p>
         <p className="text-xs text-green-600 mt-1">
-          Un empleado de CELTA revisará los cambios y recibirás una notificación al resolver.
+          Un empleado de CELTA revisará los cambios y recibirá una notificación al resolver.
         </p>
       </div>
     );
@@ -38,39 +28,15 @@ export default function ResumenCambios({
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-amber-200">
-      {/* Encabezado */}
       <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/50 rounded-t-xl">
         <h2 className="text-sm font-semibold text-amber-800">
-          Cambios pendientes de envío ({totalCambios})
+          Cambios pendientes de envío ({cambios.length})
         </h2>
         <p className="text-xs text-amber-600 mt-0.5">
           Revisá los cambios antes de enviar la solicitud.
         </p>
       </div>
-
       <ul className="divide-y divide-gray-100">
-        {/* Cambios en datos del titular */}
-        {cambiosTitular && (
-          <li className="px-4 py-3 flex items-start gap-3">
-            <span className="mt-0.5 text-base">👤</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800">Datos del titular</p>
-              {cambiosTitular.celular !== undefined && (
-                <p className="text-xs text-gray-500">
-                  Celular: {cambiosTitular.celular || "sin número"}
-                </p>
-              )}
-              {cambiosTitular.facturaElectronica !== undefined && (
-                <p className="text-xs text-gray-500">
-                  Factura electrónica: {cambiosTitular.facturaElectronica ? "activar" : "desactivar"}
-                </p>
-              )}
-            </div>
-            {/* Sin botón "Quitar" — los cambios del titular se manejan desde DatosTitular */}
-          </li>
-        )}
-
-        {/* Cambios en adheridos */}
         {cambios.map((c, i) => (
           <li key={i} className="px-4 py-3 flex items-start gap-3">
             <span className="mt-0.5 text-base">
@@ -97,13 +63,11 @@ export default function ResumenCambios({
           </li>
         ))}
       </ul>
-
       {error && (
         <div className="px-4 pb-3">
           <p className="text-xs text-red-600">{error}</p>
         </div>
       )}
-
       <div className="px-4 py-3 border-t border-gray-100">
         <button
           onClick={handleEnviar}

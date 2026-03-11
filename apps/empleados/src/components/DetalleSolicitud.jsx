@@ -1,217 +1,135 @@
-import { useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { db } from "../services/firebase";
+import VisorDNI from "./VisorDNI";
+import AccionesRevision from "./AccionesRevision";
 
-/**
- * La API devuelve SocNom como "APELLIDO NOMBRE" (todo mayúsculas, concatenado).
- * Estrategia de split: la primera palabra es el apellido, el resto es el nombre.
- */
-function splitNombreApellido(socNom = "") {
-  const partes = socNom.trim().split(/\s+/);
-  if (partes.length === 0) return { apellido: "", nombre: "" };
-  if (partes.length === 1) return { apellido: partes[0], nombre: "" };
-  return {
-    apellido: partes[0],
-    nombre: partes.slice(1).join(" "),
-  };
+const TIPO_META = {
+  agregar:  { label: "Alta de adherido",  color: "bg-blue-100 text-blue-800",   icon: "➕" },
+  editar:   { label: "Modificación",       color: "bg-yellow-100 text-yellow-800", icon: "✏️" },
+  eliminar: { label: "Baja de adherido",   color: "bg-red-100 text-red-800",     icon: "🗑️" },
+};
+
+function formatFecha(val) {
+  if (!val) return "—";
+  const d = new Date(val);
+  if (isNaN(d)) return val;
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-const PARENTESCOS = [
-  "Cónyuge",
-  "Hijo/a",
-  "Padre",
-  "Madre",
-  "Hermano/a",
-  "Otro",
-];
+function CampoTabla({ nombre, valor }) {
+  return (
+    <tr className="border-t border-gray-100">
+      <td className="py-1.5 pr-4 text-xs text-gray-500 font-medium w-36">{nombre}</td>
+      <td className="py-1.5 text-sm text-gray-800">{valor || "—"}</td>
+    </tr>
+  );
+}
 
-export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
-  const inicial = splitNombreApellido(adherido?.socNom);
-
-  const [apellido, setApellido] = useState(inicial.apellido);
-  const [nombre, setNombre] = useState(inicial.nombre);
-  const [dni, setDni] = useState(adherido?.socDocNro ?? "");
-  const [fechaNac, setFechaNac] = useState(formatearFechaInput(adherido?.cliFecNac));
-  const [parentesco, setParentesco] = useState(adherido?.pareDsc ?? "");
-  const [errores, setErrores] = useState({});
-
-  const esNuevo = !adherido;
-
-  function validar() {
-    const e = {};
-    if (!apellido.trim()) e.apellido = "El apellido es obligatorio.";
-    if (!nombre.trim()) e.nombre = "El nombre es obligatorio.";
-    if (!dni.trim() || !/^\d{7,8}$/.test(dni.trim()))
-      e.dni = "Ingresá un DNI válido (7 u 8 dígitos).";
-    if (!fechaNac) e.fechaNac = "La fecha de nacimiento es obligatoria.";
-    if (!parentesco) e.parentesco = "Seleccioná un parentesco.";
-    return e;
-  }
-
-  function handleGuardar() {
-    const e = validar();
-    if (Object.keys(e).length > 0) {
-      setErrores(e);
-      return;
-    }
-
-    onGuardar({
-      apellido: apellido.trim().toUpperCase(),
-      nombre: nombre.trim().toUpperCase(),
-      socNom: `${apellido.trim().toUpperCase()} ${nombre.trim().toUpperCase()}`,
-      socDocNro: dni.trim(),
-      cliFecNac: fechaNac,
-      pareDsc: parentesco,
-      ...(adherido?.id ? { id: adherido.id } : {}),
-    });
-  }
+function TarjetaCambio({ cambio, dniTitular }) {
+  const meta = TIPO_META[cambio.tipo] ?? { label: cambio.tipo, color: "bg-gray-100 text-gray-700", icon: "•" };
+  const d = cambio.datos ?? {};
+  const tieneFoto = !!(cambio.fotoFrentePath || cambio.fotoDorsoPath);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-      <h3 className="text-base font-semibold text-gray-800 mb-4">
-        {esNuevo ? "Agregar familiar" : "Editar familiar"}
+    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${meta.color}`}>
+          {meta.icon} {meta.label}
+        </span>
+        <span className="text-xs text-gray-400">DNI adherido: {cambio.adheridoDni ?? d.socDocNro ?? "—"}</span>
+      </div>
+
+      {/* Para bajas solo mostramos el DNI, no hay datos adicionales */}
+      {cambio.tipo === "eliminar" ? (
+        <p className="text-sm text-gray-500 italic">
+          Se solicita dar de baja al adherido con DNI {cambio.adheridoDni}.
+        </p>
+      ) : (
+        <table className="w-full">
+          <tbody>
+            <CampoTabla nombre="Apellido y nombre" valor={d.socNom} />
+            <CampoTabla nombre="DNI"               valor={d.socDocNro} />
+            <CampoTabla nombre="Fecha de nac."     valor={formatFecha(d.cliFecNac)} />
+            <CampoTabla nombre="Parentesco"        valor={d.pareDsc} />
+          </tbody>
+        </table>
+      )}
+
+      {tieneFoto && (
+        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4">
+          {cambio.fotoFrentePath && (
+            <VisorDNI path={cambio.fotoFrentePath} label="DNI frente" />
+          )}
+          {cambio.fotoDorsoPath && (
+            <VisorDNI path={cambio.fotoDorsoPath} label="DNI dorso" />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResuelta }) {
+  const [sol, setSol] = useState(inicial);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "solicitudes", inicial.id), snap => {
+      if (snap.exists()) setSol({ id: snap.id, ...snap.data() });
+    });
+    return unsub;
+  }, [inicial.id]);
+
+  const pendiente = sol.estado === "pendiente";
+
+  return (
+    <div>
+      {/* Encabezado */}
+      <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800">Solicitud — DNI {sol.titularDni}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Código cliente: {sol.clicod}</p>
+          </div>
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-1 ${
+            sol.estado === "pendiente" ? "bg-yellow-100 text-yellow-800" :
+            sol.estado === "aprobado"  ? "bg-green-100 text-green-800" :
+                                         "bg-red-100 text-red-800"
+          }`}>
+            {sol.estado}
+          </span>
+        </div>
+
+        {sol.estado === "rechazado" && sol.motivoRechazo && (
+          <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
+            <strong>Motivo de rechazo:</strong> {sol.motivoRechazo}
+          </div>
+        )}
+      </div>
+
+      {/* Cambios */}
+      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+        Cambios solicitados ({sol.cambios?.length ?? 0})
       </h3>
 
-      <div className="space-y-4">
-        {/* Apellido y Nombre en fila */}
-        <div className="grid grid-cols-2 gap-3">
-          <Campo
-            label="Apellido"
-            value={apellido}
-            onChange={(v) => {
-              setApellido(v);
-              setErrores((e) => ({ ...e, apellido: undefined }));
-            }}
-            error={errores.apellido}
-            placeholder="GARCÍA"
-            autoCapitalize="characters"
-          />
-          <Campo
-            label="Nombre/s"
-            value={nombre}
-            onChange={(v) => {
-              setNombre(v);
-              setErrores((e) => ({ ...e, nombre: undefined }));
-            }}
-            error={errores.nombre}
-            placeholder="JUAN CARLOS"
-            autoCapitalize="characters"
-          />
-        </div>
+      {(!sol.cambios || sol.cambios.length === 0) && (
+        <p className="text-gray-400 text-sm mb-4">Sin cambios registrados.</p>
+      )}
 
-        {/* DNI */}
-        <Campo
-          label="DNI"
-          value={dni}
-          onChange={(v) => {
-            setDni(v);
-            setErrores((e) => ({ ...e, dni: undefined }));
-          }}
-          error={errores.dni}
-          placeholder="12345678"
-          inputMode="numeric"
-          maxLength={8}
-        />
-
-        {/* Fecha de nacimiento */}
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Fecha de nacimiento
-          </label>
-          <input
-            type="date"
-            value={fechaNac}
-            onChange={(e) => {
-              setFechaNac(e.target.value);
-              setErrores((prev) => ({ ...prev, fechaNac: undefined }));
-            }}
-            max={hoy()}
-            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errores.fechaNac ? "border-red-400" : "border-gray-300"
-            }`}
-          />
-          {errores.fechaNac && (
-            <p className="text-xs text-red-500 mt-1">{errores.fechaNac}</p>
-          )}
-        </div>
-
-        {/* Parentesco */}
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            Parentesco
-          </label>
-          <select
-            value={parentesco}
-            onChange={(e) => {
-              setParentesco(e.target.value);
-              setErrores((prev) => ({ ...prev, parentesco: undefined }));
-            }}
-            className={`w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              errores.parentesco ? "border-red-400" : "border-gray-300"
-            }`}
-          >
-            <option value="">Seleccioná...</option>
-            {PARENTESCOS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-          {errores.parentesco && (
-            <p className="text-xs text-red-500 mt-1">{errores.parentesco}</p>
-          )}
-        </div>
+      <div className="space-y-3 mb-6">
+        {sol.cambios?.map((c, i) => (
+          <TarjetaCambio key={i} cambio={c} dniTitular={sol.titularDni} />
+        ))}
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-3 mt-6">
-        <button
-          onClick={handleGuardar}
-          className="flex-1 bg-blue-600 text-white text-sm font-medium py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          {esNuevo ? "Agregar" : "Guardar"}
-        </button>
-        <button
-          onClick={onCancelar}
-          className="flex-1 border border-gray-300 text-gray-600 text-sm font-medium py-2 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Cancelar
-        </button>
-      </div>
+      {pendiente ? (
+        <AccionesRevision solicitudId={sol.id} onResuelta={onResuelta} />
+      ) : (
+        <p className="text-center text-sm text-gray-400 mt-4">
+          Esta solicitud ya fue resuelta y no puede modificarse.
+        </p>
+      )}
     </div>
   );
-}
-
-function Campo({ label, value, onChange, error, placeholder, inputMode, maxLength, autoCapitalize }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        inputMode={inputMode}
-        maxLength={maxLength}
-        autoCapitalize={autoCapitalize}
-        className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-          error ? "border-red-400" : "border-gray-300"
-        }`}
-      />
-      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
-    </div>
-  );
-}
-
-// Fix timezone: extrae YYYY-MM-DD del string ISO sin convertir a hora local
-function formatearFechaInput(fecha) {
-  if (!fecha) return "";
-  try {
-    const str = fecha?.toDate ? fecha.toDate().toISOString() : String(fecha);
-    return str.split("T")[0];
-  } catch {
-    return "";
-  }
-}
-
-function hoy() {
-  return new Date().toISOString().split("T")[0];
 }

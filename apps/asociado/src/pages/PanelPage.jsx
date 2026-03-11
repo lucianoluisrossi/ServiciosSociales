@@ -11,18 +11,9 @@ export default function PanelPage() {
   const auth = getAuth();
   const navigate = useNavigate();
   const { titular, adheridos, loading, error, recargar } = useAdheridos();
-  const {
-    cambios,
-    cambiosTitular,
-    solicitudActual,
-    agregarCambio,
-    quitarCambio,
-    actualizarDatosTitular,
-    enviarSolicitud,
-    enviando,
-  } = useSolicitud(titular);
+  const { cambios, solicitudActual, agregarCambio, quitarCambio, enviarSolicitud, enviando } = useSolicitud();
 
-  const hayAlgoCambio = cambios.length > 0 || cambiosTitular !== null;
+  console.log("titular en PanelPage:", titular);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -86,11 +77,7 @@ export default function PanelPage() {
           <EstadoSolicitud solicitud={solicitudActual} />
         )}
 
-        {/* DatosTitular recibe onChange para notificar cambios al hook */}
-        <DatosTitular
-          titular={titular}
-          onChange={actualizarDatosTitular}
-        />
+        <DatosTitular titular={titular} />
 
         <ListaAdheridos
           adheridos={adheridos}
@@ -100,11 +87,9 @@ export default function PanelPage() {
           solicitudActiva={false}
         />
 
-        {/* ResumenCambios aparece si hay cambios en adheridos O en datos del titular */}
-        {hayAlgoCambio && (
+        {cambios.length > 0 && (
           <ResumenCambios
             cambios={cambios}
-            cambiosTitular={cambiosTitular}
             adheridos={adheridos}
             titular={titular}
             onQuitarCambio={quitarCambio}

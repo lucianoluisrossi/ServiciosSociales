@@ -6,32 +6,18 @@ const PARENTESCOS = [
   "Abuelo/a", "Nieto/a", "Suegro/a", "Cuñado/a", "Otro",
 ];
 
-/**
- * La API devuelve socNom como "APELLIDO NOMBRE" (concatenado).
- * Estrategia: primera palabra = apellido, resto = nombre.
- */
-function splitApellidoNombre(socNom = "") {
-  const partes = socNom.trim().split(/\s+/);
-  if (partes.length === 0) return { apellido: "", nombre: "" };
-  if (partes.length === 1) return { apellido: partes[0], nombre: "" };
-  return { apellido: partes[0], nombre: partes.slice(1).join(" ") };
-}
-
-export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
-  const split = splitApellidoNombre(adherido?.socNom);
-
-  const [apellido, setApellido] = useState(split.apellido);
-  const [nombre, setNombre]     = useState(split.nombre);
+export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
   const [form, setForm] = useState({
-    socDocNro: adherido?.socDocNro ?? "",
-    cliFecNac: toInputDate(adherido?.cliFecNac),
-    pareDsc:   adherido?.pareDsc   ?? "",
+    socNom:    inicial?.socNom    ?? "",
+    socDocNro: inicial?.socDocNro ?? "",
+    cliFecNac: toInputDate(inicial?.cliFecNac),
+    pareDsc:   inicial?.pareDsc   ?? "",
   });
   const [fotoFrentePath, setFotoFrentePath] = useState(null);
   const [fotoDorsoPath,  setFotoDorsoPath]  = useState(null);
   const [errores, setErrores] = useState({});
 
-  const esEdicion = !!adherido;
+  const esEdicion = !!inicial;
 
   const set = (campo, val) => {
     setForm((prev) => ({ ...prev, [campo]: val }));
@@ -40,62 +26,33 @@ export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
 
   const validar = () => {
     const e = {};
-    if (!apellido.trim()) e.apellido = "Requerido";
-    if (!nombre.trim())   e.nombre   = "Requerido";
+    if (!form.socNom.trim())    e.socNom = "Requerido";
     if (!form.socDocNro.trim() || !/^\d{7,8}$/.test(form.socDocNro.trim()))
       e.socDocNro = "DNI inválido (7-8 dígitos)";
-    if (!form.cliFecNac) e.cliFecNac = "Requerida";
-    if (!form.pareDsc)   e.pareDsc   = "Requerido";
+    if (!form.cliFecNac)        e.cliFecNac = "Requerida";
+    if (!form.pareDsc)          e.pareDsc = "Requerido";
     return e;
   };
 
   const handleSubmit = () => {
     const e = validar();
     if (Object.keys(e).length > 0) { setErrores(e); return; }
-
-    const socNom = `${apellido.trim().toUpperCase()} ${nombre.trim().toUpperCase()}`;
-
     onGuardar(
-      {
-        apellido: apellido.trim().toUpperCase(),
-        nombre:   nombre.trim().toUpperCase(),
-        socNom,
-        socDocNro: form.socDocNro.trim(),
-        cliFecNac: form.cliFecNac,
-        pareDsc:   form.pareDsc,
-      },
-      fotoFrentePath ?? null,  // nunca undefined
-      fotoDorsoPath  ?? null   // nunca undefined
+      { ...form, socDocNro: form.socDocNro.trim() },
+      fotoFrentePath,
+      fotoDorsoPath
     );
   };
 
   return (
     <div className="space-y-3">
-      {/* Apellido y Nombre separados */}
       <div className="grid grid-cols-2 gap-3">
-        <Campo label="Apellido *" error={errores.apellido}>
+        <Campo label="Apellido y nombre *" error={errores.socNom}>
           <input
-            className={input(errores.apellido)}
-            value={apellido}
-            onChange={(e) => {
-              setApellido(e.target.value);
-              setErrores((prev) => ({ ...prev, apellido: null }));
-            }}
-            placeholder="GARCÍA"
-            autoCapitalize="characters"
-          />
-        </Campo>
-
-        <Campo label="Nombre/s *" error={errores.nombre}>
-          <input
-            className={input(errores.nombre)}
-            value={nombre}
-            onChange={(e) => {
-              setNombre(e.target.value);
-              setErrores((prev) => ({ ...prev, nombre: null }));
-            }}
-            placeholder="JUAN CARLOS"
-            autoCapitalize="characters"
+            className={input(errores.socNom)}
+            value={form.socNom}
+            onChange={(e) => set("socNom", e.target.value)}
+            placeholder="García Juan"
           />
         </Campo>
 
@@ -105,8 +62,6 @@ export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
             value={form.socDocNro}
             onChange={(e) => set("socDocNro", e.target.value)}
             placeholder="12345678"
-            inputMode="numeric"
-            maxLength={8}
             disabled={esEdicion}
           />
         </Campo>
@@ -121,7 +76,7 @@ export default function FormAdherido({ adherido, onGuardar, onCancelar }) {
           />
         </Campo>
 
-        <Campo label="Parentesco *" error={errores.pareDsc} fullWidth>
+        <Campo label="Parentesco *" error={errores.pareDsc}>
           <select
             className={input(errores.pareDsc)}
             value={form.pareDsc}
@@ -180,9 +135,9 @@ function input(err) {
     ${err ? "border-red-400 bg-red-50" : "border-gray-300"}`;
 }
 
-function Campo({ label, error, children, fullWidth }) {
+function Campo({ label, error, children }) {
   return (
-    <div className={fullWidth ? "col-span-2" : ""}>
+    <div>
       <label className="block text-xs text-gray-500 mb-1">{label}</label>
       {children}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
@@ -190,17 +145,13 @@ function Campo({ label, error, children, fullWidth }) {
   );
 }
 
-// Fix timezone: extrae YYYY-MM-DD sin conversión a hora local
 function toInputDate(val) {
   if (!val) return "";
-  try {
-    const str = val?.toDate ? val.toDate().toISOString() : String(val);
-    return str.split("T")[0];
-  } catch {
-    return "";
-  }
+  const d = new Date(val);
+  if (isNaN(d)) return "";
+  return d.toISOString().slice(0, 10);
 }
 
 function today() {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toISOString().slice(0, 10);
 }

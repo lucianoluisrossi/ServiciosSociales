@@ -1,40 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { getAuth } from "firebase/auth";
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 
-/**
- * Reemplaza recursivamente todos los valores `undefined` por `null`
- * para que Firestore no rechace el documento.
- */
-function sanitizar(obj) {
-  if (obj === undefined) return null;
-  if (obj === null || typeof obj !== "object") return obj;
-  if (Array.isArray(obj)) return obj.map(sanitizar);
-  return Object.fromEntries(
-    Object.entries(obj).map(([k, v]) => [k, sanitizar(v)])
-  );
-}
-
-export function useSolicitud(titular) {
+export function useSolicitud() {
   const [cambios, setCambios] = useState([]);
-  const [cambiosTitular, setCambiosTitular] = useState(null);
   const [solicitudActual, setSolicitudActual] = useState(null);
   const [enviando, setEnviando] = useState(false);
-
   const auth = getAuth();
   const db = getFirestore();
 
-  // Escucha la solicitud activa en tiempo real
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -58,7 +32,7 @@ export function useSolicitud(titular) {
           const ahora = Date.now();
           const creadoEn = data.creadoEn?.toMillis?.() ?? 0;
           const horas48 = 48 * 60 * 60 * 1000;
-          if (data.estado === "pendiente" || ahora - creadoEn < horas48) {
+          if (data.estado === "pendiente" || (ahora - creadoEn < horas48)) {
             setSolicitudActual(data);
           } else {
             setSolicitudActual(null);
@@ -71,8 +45,6 @@ export function useSolicitud(titular) {
       return () => unsub();
     });
   }, [auth.currentUser]);
-
-  // --- Cambios en adheridos ---
 
   const agregarCambio = useCallback((cambio) => {
     setCambios((prev) => {
@@ -87,72 +59,38 @@ export function useSolicitud(titular) {
     setCambios((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  // --- Cambios en titular ---
+  const enviarSolicitud = useCallback(async (clicod, datosTitular) => {
+    if (cambios.length === 0) return;
+    setEnviando(true);
 
-  const actualizarDatosTitular = useCallback((nuevosDatos) => {
-    setCambiosTitular(nuevosDatos);
-  }, []);
+    console.log("datosTitular:", datosTitular);
+    console.log("clicod:", clicod);
 
-  // --- Envío ---
+    try {
+      const user = auth.currentUser;
+      const tokenResult = await user.getIdTokenResult();
+      const dniAsociado = tokenResult.claims.dni;
+      await addDoc(collection(db, "solicitudes"), {
+        titularDni: dniAsociado,
+        clicod:     clicod ?? null,
+        titular: {
+          titNom:    datosTitular?.titNom    ?? null,
+          sumNro:    datosTitular?.sumNro    ?? null,
+          socDocNro: datosTitular?.socDocNro ?? null,
+        },
+        cambios,
+        estado:        "pendiente",
+        creadoEn:      serverTimestamp(),
+        revisadoPor:   null,
+        motivoRechazo: null,
+      });
+      setCambios([]);
+    } catch (e) {
+      throw e;
+    } finally {
+      setEnviando(false);
+    }
+  }, [cambios, auth, db]);
 
-  const enviarSolicitud = useCallback(
-    async (clicod, datosTitular) => {
-      const hayAlgo = cambios.length > 0 || cambiosTitular !== null;
-      if (!hayAlgo) return;
-
-      setEnviando(true);
-      try {
-        const user = auth.currentUser;
-        const tokenResult = await user.getIdTokenResult();
-        const dniAsociado = tokenResult.claims.dni;
-
-        const payload = sanitizar({
-          titularDni: dniAsociado,
-          clicod: clicod ?? null,
-          titular: {
-            titNom: datosTitular?.titNom ?? null,
-            sumNro: datosTitular?.sumNro ?? null,
-            socDocNro: datosTitular?.socDocNro ?? null,
-          },
-          cambios,
-          ...(cambiosTitular
-            ? {
-                cambiosTitular: {
-                  ...cambiosTitular,
-                  original: {
-                    celular: titular?.celular ?? null,
-                    facturaElectronica: titular?.facturaElectronica ?? false,
-                  },
-                },
-              }
-            : {}),
-          estado: "pendiente",
-          creadoEn: serverTimestamp(),
-          revisadoPor: null,
-          motivoRechazo: null,
-        });
-
-        await addDoc(collection(db, "solicitudes"), payload);
-
-        setCambios([]);
-        setCambiosTitular(null);
-      } catch (e) {
-        throw e;
-      } finally {
-        setEnviando(false);
-      }
-    },
-    [cambios, cambiosTitular, titular, auth, db]
-  );
-
-  return {
-    cambios,
-    cambiosTitular,
-    solicitudActual,
-    enviando,
-    agregarCambio,
-    quitarCambio,
-    actualizarDatosTitular,
-    enviarSolicitud,
-  };
+  return { cambios, solicitudActual, agregarCambio, quitarCambio, enviarSolicitud, enviando };
 }
