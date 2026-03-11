@@ -24,13 +24,71 @@ function fileToBase64(file) {
   });
 }
 
-/** Obtiene dimensiones de una imagen desde un File */
-function getImageDimensions(file) {
+/**
+ * Lee el tag EXIF Orientation desde los primeros bytes del archivo JPEG.
+ * Orientaciones 5-8 indican rotación 90° o 270° → width y height están invertidos.
+ * Devuelve true si hay que swappear las dimensiones.
+ */
+async function necesitaSwapDimensiones(file) {
+  try {
+    if (!file.type.includes("jpeg") && !file.type.includes("jpg")) return false;
+
+    const buffer = await file.slice(0, 65536).arrayBuffer();
+    const view = new DataView(buffer);
+
+    if (view.getUint16(0) !== 0xFFD8) return false;
+
+    let offset = 2;
+    while (offset < view.byteLength - 4) {
+      const marker = view.getUint16(offset);
+      offset += 2;
+
+      if (marker === 0xFFE1) {
+        offset += 2; // saltar longitud del segmento
+        if (view.getUint32(offset) !== 0x45786966) return false; // "Exif"
+
+        const tiffOffset = offset + 6;
+        const littleEndian = view.getUint16(tiffOffset) === 0x4949;
+        const readU16 = (o) => view.getUint16(tiffOffset + o, littleEndian);
+        const readU32 = (o) => view.getUint32(tiffOffset + o, littleEndian);
+
+        const ifdOffset = readU32(4);
+        const entries = readU16(ifdOffset);
+
+        for (let i = 0; i < entries; i++) {
+          const e = ifdOffset + 2 + i * 12;
+          if (readU16(e) === 0x0112) { // Orientation tag
+            const orientation = readU16(e + 8);
+            return orientation >= 5 && orientation <= 8;
+          }
+        }
+        return false;
+      } else {
+        offset += view.getUint16(offset);
+      }
+    }
+  } catch {
+    // Si falla, no swappeamos (mejor falso negativo que bloquear)
+  }
+  return false;
+}
+
+/** Obtiene dimensiones reales corregidas por orientación EXIF */
+async function getImageDimensions(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => { URL.revokeObjectURL(url); resolve({ width: img.naturalWidth, height: img.naturalHeight }); };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("No se pudo cargar la imagen")); };
+    img.onload = async () => {
+      URL.revokeObjectURL(url);
+      let { naturalWidth: width, naturalHeight: height } = img;
+      const swap = await necesitaSwapDimensiones(file);
+      if (swap) [width, height] = [height, width];
+      resolve({ width, height });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("No se pudo cargar la imagen"));
+    };
     img.src = url;
   });
 }
@@ -81,7 +139,6 @@ export function useValidarFotoDNI() {
     const imagenBase64 = await fileToBase64(file);
     const mediaType = file.type || "image/jpeg";
 
-    // httpsCallable lanza error si hay fallo de red o la función devuelve HttpsError
     const result = await validarFotoDNIFn({ imagenBase64, mediaType, lado });
     const { esValido, motivo } = result.data;
 
