@@ -4,138 +4,100 @@ import { getAuth } from "firebase/auth";
 import { useLeerCodigoDNI } from "../../hooks/useLeerCodigoDNI";
 import { useValidarFotoDNI } from "../../hooks/useValidarFotoDNI";
 import { useToast } from "../ui/Toast";
+import ScannerDNI from "../ui/ScannerDNI";
 
 const PARENTESCOS = [
   "Cónyuge", "Hijo/a", "Padre", "Madre", "Hermano/a",
   "Abuelo/a", "Nieto/a", "Suegro/a", "Cuñado/a", "Otro",
 ];
 
-const MAX_INTENTOS_QR = 3;
+const MAX_INTENTOS = 3;
 
 const PASO = {
-  BIENVENIDA:  "bienvenida",
-  ESCANEANDO:  "escaneando",   // intento QR dorso
-  FRENTE_QR:   "frente_qr",   // fallback QR frente
-  MANUAL:      "manual",       // fallback manual con foto obligatoria
-  FORMULARIO:  "formulario",
+  BIENVENIDA: "bienvenida",
+  SCANNER:    "scanner",
+  MANUAL:     "manual",
+  FORMULARIO: "formulario",
 };
 
 export default function NuevoAdherido({ onGuardar, onCancelar }) {
   const [paso, setPaso]               = useState(PASO.BIENVENIDA);
-  const [procesando, setProcesando]   = useState(false);
-  const [intentos, setIntentos]       = useState(0);
-  const [errorEscaneo, setErrorEscaneo] = useState(null);
-  const [datosManual, setDatosManual] = useState(false); // flag para empleado
+  const [intentosFallidos, setIntentosFallidos] = useState(0);
+  const [mensajeError, setMensajeError] = useState(null);
+  const [datosManual, setDatosManual] = useState(false);
 
-  // Formulario
   const [form, setForm]               = useState({ socNom: "", socDocNro: "", cliFecNac: "", pareDsc: "" });
   const [precargados, setPrecargados] = useState({});
   const [errores, setErrores]         = useState({});
 
-  // Fotos (solo en modo manual)
   const [fotoFrentePath, setFotoFrentePath] = useState(null);
-  const [fotoDorsoPath,  setFotoDorsoPath]  = useState(null);
-  const [subiendoFoto,   setSubiendoFoto]   = useState(false);
+  const [subiendoFoto, setSubiendoFoto]     = useState(false);
+  const inputFotoRef = useRef();
 
-  const inputDorsoRef  = useRef();
-  const inputFrenteRef = useRef();
-  const inputFotoRef   = useRef();
-
-  const { leer }    = useLeerCodigoDNI();
-  const { validar } = useValidarFotoDNI();
+  const { procesar }  = useLeerCodigoDNI();
+  const { validar }   = useValidarFotoDNI();
   const { toast, ToastContainer } = useToast();
 
-  // ── Helpers ───────────────────────────────────────────────────────────
-  const precargarDatos = (datos) => {
-    const nuevas = {};
+  // ── Scanner detectó un código ─────────────────────────────────────────
+  const handleDetectado = (texto) => {
+    const resultado = procesar(texto);
+
+    if (!resultado.ok) {
+      // Código leído pero no es DNI argentino
+      const nuevosIntentos = intentosFallidos + 1;
+      setIntentosFallidos(nuevosIntentos);
+      if (nuevosIntentos >= MAX_INTENTOS) {
+        setDatosManual(true);
+        setPaso(PASO.MANUAL);
+      } else {
+        setMensajeError(`${resultado.error} (intento ${nuevosIntentos} de ${MAX_INTENTOS})`);
+        setPaso(PASO.SCANNER); // re-abrir scanner
+      }
+      return;
+    }
+
+    // ¡Éxito! Precargar datos
+    const nuevasPrecarga = {};
     const nuevoForm = { socNom: "", socDocNro: "", cliFecNac: "", pareDsc: "" };
-    if (datos.socNom)    { nuevoForm.socNom    = datos.socNom;                    nuevas.socNom    = true; }
-    if (datos.socDocNro) { nuevoForm.socDocNro = datos.socDocNro;                 nuevas.socDocNro = true; }
-    if (datos.cliFecNac) { const f = toInputDate(datos.cliFecNac); if (f) { nuevoForm.cliFecNac = f; nuevas.cliFecNac = true; } }
+    const d = resultado.datos;
+
+    if (d.socNom)    { nuevoForm.socNom    = d.socNom;                    nuevasPrecarga.socNom    = true; }
+    if (d.socDocNro) { nuevoForm.socDocNro = d.socDocNro;                 nuevasPrecarga.socDocNro = true; }
+    if (d.cliFecNac) { const f = toInputDate(d.cliFecNac); if (f) { nuevoForm.cliFecNac = f; nuevasPrecarga.cliFecNac = true; } }
+
     setForm(nuevoForm);
-    setPrecargados(nuevas);
-    setErrores({});
+    setPrecargados(nuevasPrecarga);
+    setDatosManual(false);
+    setMensajeError(null);
+    setPaso(PASO.FORMULARIO);
   };
 
-  const set = (campo, val) => {
-    setForm((prev) => ({ ...prev, [campo]: val }));
-    setErrores((prev) => ({ ...prev, [campo]: null }));
-    setPrecargados((prev) => ({ ...prev, [campo]: false }));
+  const handleErrorScanner = (msg) => {
+    setMensajeError(msg);
   };
 
-  // ── Escaneo QR/PDF417 ─────────────────────────────────────────────────
-  const handleEscaneo = async (e, esFrente = false) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = "";
-    setErrorEscaneo(null);
-    setProcesando(true);
-
-    const resultado = await leer(file);
-    setProcesando(false);
-
-    if (resultado.ok) {
-      precargarDatos(resultado.datos);
-      setDatosManual(false);
-      setPaso(PASO.FORMULARIO);
-      return;
-    }
-
-    // Falló
-    const nuevosIntentos = intentos + 1;
-    setIntentos(nuevosIntentos);
-    setErrorEscaneo(resultado.error);
-
-    if (!esFrente && nuevosIntentos >= MAX_INTENTOS_QR) {
-      // Después de 3 intentos en dorso → probar frente
-      setPaso(PASO.FRENTE_QR);
-      setIntentos(0);
-      setErrorEscaneo(null);
-    }
+  const handleCancelarScanner = () => {
+    setPaso(PASO.BIENVENIDA);
+    setMensajeError(null);
   };
 
-  const handleFrenteQR = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    e.target.value = "";
-    setErrorEscaneo(null);
-    setProcesando(true);
-
-    const resultado = await leer(file);
-    setProcesando(false);
-
-    if (resultado.ok) {
-      precargarDatos(resultado.datos);
-      setDatosManual(false);
-      setPaso(PASO.FORMULARIO);
-      return;
-    }
-
-    const nuevosIntentos = intentos + 1;
-    setIntentos(nuevosIntentos);
-    setErrorEscaneo(resultado.error);
-
-    if (nuevosIntentos >= MAX_INTENTOS_QR) {
-      // Agotados todos los intentos → modo manual
-      setDatosManual(true);
-      setPaso(PASO.MANUAL);
-      setIntentos(0);
-      setErrorEscaneo(null);
-    }
+  // ── Reintentar scanner ────────────────────────────────────────────────
+  const handleReintentar = () => {
+    setMensajeError(null);
+    setPaso(PASO.SCANNER);
   };
 
   // ── Subir foto (modo manual) ──────────────────────────────────────────
-  const handleSubirFoto = async (e, lado) => {
+  const handleSubirFoto = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     e.target.value = "";
-    setSubiendoFoto(lado);
+    setSubiendoFoto(true);
 
     try {
-      // Validar con IA
       let resultado;
       try {
-        resultado = await validar(file, lado);
+        resultado = await validar(file, "frente");
       } catch {
         toast("No se pudo verificar la foto. Revisá tu conexión.", "advertencia");
         setSubiendoFoto(false);
@@ -148,8 +110,19 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
         return;
       }
 
-      // Si el frente tiene datos, precargar los que falten
-      if (lado === "frente" && resultado.datos) {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      const tokenResult = await user.getIdTokenResult();
+      const dniAsociado = tokenResult.claims.dni;
+      const dniAdherido = form.socDocNro || `temp_${Date.now()}`;
+
+      const storage = getStorage();
+      const path = `solicitudes/${dniAsociado}/${dniAdherido}/frente_${Date.now()}.jpg`;
+      await uploadBytes(ref(storage, path), file, { contentType: file.type });
+      setFotoFrentePath(path);
+
+      // Si la IA extrajo datos, precargar los que falten
+      if (resultado.datos) {
         setForm((prev) => ({
           socNom:    prev.socNom    || resultado.datos.socNom    || "",
           socDocNro: prev.socDocNro || resultado.datos.socDocNro || "",
@@ -157,21 +130,6 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
           pareDsc:   prev.pareDsc,
         }));
       }
-
-      // Subir a Storage
-      const auth = getAuth();
-      const user = auth.currentUser;
-      const tokenResult = await user.getIdTokenResult();
-      const dniAsociado = tokenResult.claims.dni;
-      const dniAdherido = form.socDocNro || resultado.datos?.socDocNro || `temp_${Date.now()}`;
-
-      const storage = getStorage();
-      const path = `solicitudes/${dniAsociado}/${dniAdherido}/${lado}_${Date.now()}.jpg`;
-      await uploadBytes(ref(storage, path), file, { contentType: file.type });
-
-      if (lado === "frente") setFotoFrentePath(path);
-      else setFotoDorsoPath(path);
-
     } catch (err) {
       console.error("Error subiendo foto:", err);
       toast("No se pudo subir la foto. Intentá de nuevo.", "error");
@@ -180,7 +138,13 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
     }
   };
 
-  // ── Validación y envío ────────────────────────────────────────────────
+  // ── Form helpers ──────────────────────────────────────────────────────
+  const set = (campo, val) => {
+    setForm((prev) => ({ ...prev, [campo]: val }));
+    setErrores((prev) => ({ ...prev, [campo]: null }));
+    setPrecargados((prev) => ({ ...prev, [campo]: false }));
+  };
+
   const validarForm = () => {
     const e = {};
     if (!form.socNom.trim())    e.socNom = "Requerido";
@@ -188,9 +152,8 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
       e.socDocNro = "DNI inválido (7-8 dígitos)";
     if (!form.cliFecNac)        e.cliFecNac = "Requerida";
     if (!form.pareDsc)          e.pareDsc = "Requerido";
-    if (datosManual) {
-      if (!fotoFrentePath) e.fotoFrente = "Requerida cuando los datos son ingresados manualmente";
-    }
+    if (datosManual && !fotoFrentePath)
+      e.fotoFrente = "Requerida cuando los datos son ingresados manualmente";
     return e;
   };
 
@@ -200,38 +163,13 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
     onGuardar(
       { ...form, socDocNro: form.socDocNro.trim(), datosManual },
       fotoFrentePath,
-      fotoDorsoPath
+      null
     );
   };
 
   const hayPrecargados = Object.values(precargados).some(Boolean);
 
-  // ── Componente de botón de escaneo ────────────────────────────────────
-  const BotonEscaneo = ({ inputRef, onChange, label, hint, disabled }) => (
-    <>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment"
-        className="hidden" onChange={onChange} />
-      <button type="button" onClick={() => { setErrorEscaneo(null); inputRef.current?.click(); }}
-        disabled={disabled}
-        className={`w-full border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2
-          transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed
-          ${errorEscaneo ? "border-red-300 bg-red-50 hover:bg-red-100" : "border-blue-300 bg-blue-50 hover:bg-blue-100"}`}
-      >
-        {disabled ? (
-          <><Spinner /><p className="text-sm font-medium text-blue-700">Leyendo código...</p></>
-        ) : errorEscaneo ? (
-          <><span className="text-3xl">📷</span><p className="text-sm font-medium text-red-600">Intentar de nuevo</p></>
-        ) : (
-          <><span className="text-4xl">📄</span>
-            <p className="text-sm font-medium text-blue-700">{label}</p>
-            <p className="text-xs text-blue-500">{hint}</p>
-          </>
-        )}
-      </button>
-    </>
-  );
-
-  // ── Render ─────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────
   return (
     <>
       <ToastContainer />
@@ -247,18 +185,26 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
               <span className="font-medium text-gray-700">Tené el DNI del familiar a mano.</span>
             </p>
           </div>
+
           <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-left space-y-1.5">
             <p className="text-xs font-semibold text-blue-800">¿Cómo funciona?</p>
-            <p className="text-xs text-blue-700">📷 Escaneás el código del DNI</p>
+            <p className="text-xs text-blue-700">📷 Abrimos la cámara</p>
+            <p className="text-xs text-blue-700">🔍 Apuntás al código del DNI</p>
             <p className="text-xs text-blue-700">✨ Los datos se completan solos</p>
-            <p className="text-xs text-blue-700">✏️ Solo completás el parentesco</p>
           </div>
+
+          {mensajeError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-left">
+              <p className="text-xs text-red-700">{mensajeError}</p>
+            </div>
+          )}
+
           <div className="flex gap-2 pt-1">
             <button onClick={onCancelar}
               className="flex-1 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button onClick={() => setPaso(PASO.ESCANEANDO)}
+            <button onClick={() => { setMensajeError(null); setPaso(PASO.SCANNER); }}
               className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors">
               📷 Escanear DNI
             </button>
@@ -266,84 +212,38 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
         </div>
       )}
 
-      {/* PASO 2: Escaneo dorso */}
-      {paso === PASO.ESCANEANDO && (
+      {/* PASO 2: Scanner en tiempo real */}
+      {paso === PASO.SCANNER && (
         <div className="space-y-3">
           <div className="text-center">
-            <p className="text-sm font-semibold text-gray-800">Escaneá el dorso del DNI</p>
+            <p className="text-sm font-semibold text-gray-800">Escaneá el código del DNI</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              Apuntá la cámara al código de barras del dorso
+              Funciona con el código de barras del dorso o el QR del frente
             </p>
           </div>
 
-          <BotonEscaneo
-            inputRef={inputDorsoRef}
-            onChange={handleEscaneo}
-            label="Fotografiar dorso del DNI"
-            hint="Enfocá el código de barras"
-            disabled={procesando}
-          />
-
-          {errorEscaneo && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              <p className="text-xs text-red-700">{errorEscaneo}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Intento {intentos} de {MAX_INTENTOS_QR}
-                {intentos >= MAX_INTENTOS_QR - 1 && " — próximo intento: frente del DNI"}
-              </p>
+          {mensajeError && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <p className="text-xs text-amber-700">{mensajeError}</p>
             </div>
           )}
 
-          <button onClick={onCancelar}
-            className="w-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-            Cancelar
-          </button>
-        </div>
-      )}
-
-      {/* PASO 3: Fallback QR frente */}
-      {paso === PASO.FRENTE_QR && (
-        <div className="space-y-3">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            <p className="text-xs font-medium text-amber-800">No se pudo leer el dorso</p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              Intentemos con el frente del DNI — apuntá al código QR
-            </p>
-          </div>
-
-          <BotonEscaneo
-            inputRef={inputFrenteRef}
-            onChange={handleFrenteQR}
-            label="Fotografiar frente del DNI"
-            hint="Enfocá el código QR del frente"
-            disabled={procesando}
+          <ScannerDNI
+            onDetectado={handleDetectado}
+            onError={handleErrorScanner}
+            onCancelar={handleCancelarScanner}
           />
-
-          {errorEscaneo && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              <p className="text-xs text-red-700">{errorEscaneo}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Intento {intentos} de {MAX_INTENTOS_QR}
-                {intentos >= MAX_INTENTOS_QR - 1 && " — próximo: ingreso manual"}
-              </p>
-            </div>
-          )}
-
-          <button onClick={onCancelar}
-            className="w-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-            Cancelar
-          </button>
         </div>
       )}
 
-      {/* PASO 4: Modo manual (agotados todos los intentos) */}
+      {/* PASO 3: Modo manual */}
       {paso === PASO.MANUAL && (
         <div className="space-y-3">
           <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             <p className="text-xs font-medium text-amber-800">⚠️ Ingreso manual</p>
             <p className="text-xs text-amber-700 mt-0.5">
               No se pudo leer el código del DNI. Ingresá los datos manualmente
-              y adjuntá una foto del frente para que el empleado pueda verificarlos.
+              y adjuntá una foto del frente para verificación.
             </p>
           </div>
 
@@ -369,43 +269,39 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
             </Campo>
           </div>
 
-          {/* Fotos obligatorias en modo manual */}
-          <div className="border-t border-gray-100 pt-3 space-y-2">
-            <p className="text-xs font-medium text-gray-700">
-              📷 Foto del DNI <span className="text-red-500">*</span>
-              <span className="text-gray-400 font-normal ml-1">— requerida para verificación</span>
+          {/* Foto obligatoria */}
+          <div className="border-t border-gray-100 pt-3">
+            <p className="text-xs font-medium text-gray-700 mb-2">
+              📷 Foto del frente del DNI <span className="text-red-500">*</span>
             </p>
-
             <input ref={inputFotoRef} type="file" accept="image/*" capture="environment"
-              className="hidden" onChange={(e) => handleSubirFoto(e, "frente")} />
-
-            {/* Frente — obligatorio */}
-            <div>
-              {fotoFrentePath ? (
-                <div className="border-2 border-green-400 bg-green-50 rounded-xl p-3 flex items-center gap-2">
-                  <span>✅</span>
-                  <span className="text-xs text-green-700 font-medium">Frente cargado</span>
-                  <button onClick={() => setFotoFrentePath(null)}
-                    className="ml-auto text-xs text-gray-400 hover:text-red-500">Quitar</button>
-                </div>
-              ) : (
-                <button type="button"
-                  onClick={() => inputFotoRef.current?.click()}
-                  disabled={subiendoFoto === "frente"}
-                  className={`w-full border-2 border-dashed rounded-xl p-3 flex items-center gap-2 text-xs transition-all
-                    ${errores.fotoFrente ? "border-red-400 bg-red-50" : "border-gray-300 bg-gray-50 hover:border-blue-400"}`}>
-                  {subiendoFoto === "frente" ? <><Spinner small /><span className="text-gray-500">Procesando...</span></> :
-                    <><span className="text-xl">📷</span><span className="text-gray-500">Foto frente del DNI (obligatoria)</span></>}
-                </button>
-              )}
-              {errores.fotoFrente && <p className="text-xs text-red-500 mt-1">{errores.fotoFrente}</p>}
-            </div>
+              className="hidden" onChange={handleSubirFoto} />
+            {fotoFrentePath ? (
+              <div className="border-2 border-green-400 bg-green-50 rounded-xl p-3 flex items-center gap-2">
+                <span>✅</span>
+                <span className="text-xs text-green-700 font-medium">Foto cargada</span>
+                <button onClick={() => setFotoFrentePath(null)}
+                  className="ml-auto text-xs text-gray-400 hover:text-red-500">Quitar</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => inputFotoRef.current?.click()}
+                disabled={subiendoFoto}
+                className={`w-full border-2 border-dashed rounded-xl p-3 flex items-center gap-2 text-xs transition-all
+                  disabled:opacity-60
+                  ${errores.fotoFrente ? "border-red-400 bg-red-50" : "border-gray-300 bg-gray-50 hover:border-blue-400"}`}>
+                {subiendoFoto
+                  ? <><Spinner small /><span className="text-gray-500">Procesando...</span></>
+                  : <><span className="text-xl">📷</span><span className="text-gray-500">Fotografiar frente del DNI</span></>
+                }
+              </button>
+            )}
+            {errores.fotoFrente && <p className="text-xs text-red-500 mt-1">{errores.fotoFrente}</p>}
           </div>
 
           <div className="flex gap-2 justify-end pt-1">
-            <button onClick={onCancelar}
+            <button onClick={() => { setPaso(PASO.BIENVENIDA); setIntentosFallidos(0); }}
               className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
-              Cancelar
+              Volver
             </button>
             <button onClick={handleSubmit}
               className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
@@ -415,7 +311,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
         </div>
       )}
 
-      {/* PASO 5: Formulario con datos precargados del QR */}
+      {/* PASO 4: Formulario con datos del QR */}
       {paso === PASO.FORMULARIO && (
         <div className="space-y-3">
           {hayPrecargados && (
@@ -430,11 +326,11 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Apellido y nombre" error={errores.socNom} precargado={precargados.socNom}>
               <input className={inputClass(errores.socNom, precargados.socNom)}
-                value={form.socNom} onChange={(e) => set("socNom", e.target.value)} placeholder="García Juan" />
+                value={form.socNom} onChange={(e) => set("socNom", e.target.value)} />
             </Campo>
             <Campo label="DNI" error={errores.socDocNro} precargado={precargados.socDocNro}>
               <input className={inputClass(errores.socDocNro, precargados.socDocNro)}
-                value={form.socDocNro} onChange={(e) => set("socDocNro", e.target.value)} placeholder="12345678" />
+                value={form.socDocNro} onChange={(e) => set("socDocNro", e.target.value)} />
             </Campo>
             <Campo label="Fecha de nacimiento" error={errores.cliFecNac} precargado={precargados.cliFecNac}>
               <input type="date" className={inputClass(errores.cliFecNac, precargados.cliFecNac)}
@@ -465,7 +361,6 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
   );
 }
 
-// ── Helpers de UI ──────────────────────────────────────────────────────
 function inputClass(err, precargado) {
   if (err)        return "w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border-red-400 bg-red-50";
   if (precargado) return "w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border-green-300 bg-green-50";
