@@ -40,6 +40,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
 
   // ── Scanner detectó un código ─────────────────────────────────────────
   const handleDetectado = (texto) => {
+    console.log("📷 Código DNI leído:", JSON.stringify(texto));
     const resultado = procesar(texto);
 
     if (!resultado.ok) {
