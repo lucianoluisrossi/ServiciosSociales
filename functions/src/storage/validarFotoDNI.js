@@ -85,7 +85,8 @@ Si la imagen ES válida:
 
 Aceptá la imagen si:
 - Se ve algún elemento típico del dorso de un DNI argentino (código de barras, PDF417, huella dactilar, domicilio, fecha de nacimiento, fondo con guilloche, etc.)
-- La imagen tiene algo de movimiento, reflejo o no está perfectamente encuadrada — eso es normal al fotografiar con celular
+- La imagen tiene algo de movimiento, reflejo, rotación o no está perfectamente encuadrada — eso es normal al fotografiar con celular
+- La imagen está rotada en cualquier ángulo — la rotación NO es motivo de rechazo
 
 Rechazá SOLO si:
 - Es claramente otro documento (pasaporte, licencia de conducir, tarjeta de crédito, etc.)
