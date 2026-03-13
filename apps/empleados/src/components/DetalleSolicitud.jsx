@@ -115,6 +115,12 @@ export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResue
             <strong>Motivo de rechazo:</strong> {sol.motivoRechazo}
           </div>
         )}
+
+        {sol.tieneIngresosManual && (
+          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-sm text-amber-700">
+            ⚠️ <strong>Atención:</strong> Uno o más familiares fueron ingresados manualmente (no se pudo leer el código del DNI). Verificar con la foto adjunta.
+          </div>
+        )}
       </div>
 
       {/* Cambios */}

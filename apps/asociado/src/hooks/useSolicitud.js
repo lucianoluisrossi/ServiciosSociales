@@ -82,6 +82,8 @@ export function useSolicitud() {
           completo: contacto ? `+549${contacto.codArea}${contacto.celular}` : null,
         },
         cambios,
+        // Flag para el empleado: indica si algún cambio fue ingresado manualmente
+        tieneIngresosManual: cambios.some((c) => c.datos?.datosManual === true),
         estado:        "pendiente",
         creadoEn:      serverTimestamp(),
         revisadoPor:   null,
