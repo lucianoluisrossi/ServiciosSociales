@@ -54,7 +54,12 @@ export function useValidarFotoDNI() {
     const result = await validarFotoDNIFn({ imagenBase64, mediaType, lado });
     const { esValido, motivo, datos } = result.data;
 
-    if (!esValido) {
+    // La IA a veces rechaza por rotación aunque el prompt lo prohíbe.
+    // Si el único motivo es la rotación, lo tratamos como válido.
+    const esRechazoRotacion = !esValido && motivo &&
+      /rotat|45|grado/i.test(motivo);
+
+    if (!esValido && !esRechazoRotacion) {
       return {
         ok: false,
         mensaje: motivo
