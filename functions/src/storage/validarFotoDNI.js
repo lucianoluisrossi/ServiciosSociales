@@ -57,7 +57,8 @@ Si la imagen ES válida, extraé también los datos del documento:
 {"esValido": true, "motivo": "ok", "datos": {"socNom": "APELLIDO NOMBRE", "socDocNro": "12345678", "cliFecNac": "YYYY-MM-DD"}}
 
 Aceptá la imagen si:
-- Se puede identificar que es el frente de un DNI argentino en cualquier formato, aunque tenga algo de reflejo, leve desenfoque, no esté perfectamente centrado o esté rotada — eso es normal al fotografiar con celular
+- Se puede identificar que es el frente de un DNI argentino en cualquier formato, aunque tenga algo de reflejo, leve desenfoque, no esté perfectamente centrado o esté rotada en cualquier ángulo — eso es normal al fotografiar con celular
+- La imagen está rotada en cualquier ángulo — la rotación NO es motivo de rechazo
 - Formato nuevo: se ven campos como Apellido, Nombre, DNI, Fecha de Nacimiento
 - Formato tarjeta plástica: se ven campos APELLIDO/S, NOMBRE/S, NUMERO DE DOCUMENTO, y/o líneas MRZ (IDARG...)
 
