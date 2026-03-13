@@ -41,8 +41,10 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
             if (!resultado) return;
             if (detectadoRef.current) return;
             detectadoRef.current = true;
-            reader.reset();
-            onDetectado(resultado.getText());
+            const texto = resultado.getText();
+            // Primero notificar, luego resetear — evita pantalla negra
+            onDetectado(texto);
+            setTimeout(() => { try { reader.reset(); } catch {} }, 100);
           }
         );
 

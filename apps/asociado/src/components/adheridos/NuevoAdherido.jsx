@@ -48,10 +48,11 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
       setIntentosFallidos(nuevosIntentos);
       if (nuevosIntentos >= MAX_INTENTOS) {
         setDatosManual(true);
-        setPaso(PASO.MANUAL);
+        // Pequeño delay para que ZXing termine su cleanup antes de desmontar
+        setTimeout(() => setPaso(PASO.MANUAL), 150);
       } else {
         setMensajeError(`${resultado.error} (intento ${nuevosIntentos} de ${MAX_INTENTOS})`);
-        setPaso(PASO.SCANNER);
+        setTimeout(() => setPaso(PASO.SCANNER), 150);
       }
       return;
     }
@@ -67,7 +68,8 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
     setPrecargados(nuevasPrecarga);
     setDatosManual(false);
     setMensajeError(null);
-    setPaso(PASO.FORMULARIO);
+    // Delay para que ZXing haga su reset antes de desmontar el componente
+    setTimeout(() => setPaso(PASO.FORMULARIO), 150);
   };
 
   const handleErrorScanner = (msg) => {
