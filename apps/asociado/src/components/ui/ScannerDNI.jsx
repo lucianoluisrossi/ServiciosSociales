@@ -31,11 +31,11 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
     const iniciar = async () => {
       try {
-        // Obtener lista de cámaras y elegir la trasera
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        const trasera = devices.find((d) =>
-          /back|rear|environment/i.test(d.label)
-        ) || devices[devices.length - 1]; // última suele ser la trasera
+        // Obtener cámara trasera via API nativa (ZXing 0.21 no tiene listVideoInputDevices)
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const camaras = devices.filter((d) => d.kind === "videoinput");
+        const trasera = camaras.find((d) => /back|rear|environment/i.test(d.label))
+          || camaras[camaras.length - 1];
 
         const deviceId = trasera?.deviceId || undefined;
 
