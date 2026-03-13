@@ -1,50 +1,61 @@
 /**
  * ScannerDNI — pantalla completa
+ * Usa ZXing decodeFromVideoDevice directamente, sin html5-qrcode.
+ * Controlamos el <video> nosotros — sin problemas de dimensiones ni CSS.
  */
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from "@zxing/library";
 import { createPortal } from "react-dom";
-
-const SCANNER_ID = "scanner-dni-container";
-const HEADER_H   = 60;
-const FOOTER_H   = 72;
 
 export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
   const [iniciando, setIniciando] = useState(true);
   const [errorCam, setErrorCam]   = useState(null);
-  const scannerRef                = useRef(null);
-  const detectadoRef              = useRef(false);
+  const videoRef     = useRef(null);
+  const readerRef    = useRef(null);
+  const detectadoRef = useRef(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.PDF_417,
+      BarcodeFormat.QR_CODE,
+    ]);
+    hints.set(DecodeHintType.TRY_HARDER, true);
+
+    const reader = new BrowserMultiFormatReader(hints, {
+      delayBetweenScanAttempts: 100,
+    });
+    readerRef.current = reader;
+
     const iniciar = async () => {
       try {
-        const scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
-        scannerRef.current = scanner;
+        // Obtener lista de cámaras y elegir la trasera
+        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+        const trasera = devices.find((d) =>
+          /back|rear|environment/i.test(d.label)
+        ) || devices[devices.length - 1]; // última suele ser la trasera
 
-        // qrbox basado en el ancho real de pantalla
-        const w = Math.min(window.innerWidth - 40, 300);
-        const h = Math.round(w * 0.55); // proporción para código de barras horizontal
+        const deviceId = trasera?.deviceId || undefined;
 
-        await scanner.start(
-          { facingMode: "environment" },
-          {
-            fps: 15,
-            qrbox: { width: w, height: h },
-          },
-          (texto) => {
+        await reader.decodeFromVideoDevice(
+          deviceId,
+          videoRef.current,
+          (resultado, error) => {
+            if (error) return; // frame sin código — normal
+            if (!resultado) return;
             if (detectadoRef.current) return;
             detectadoRef.current = true;
-            detener(scanner).then(() => onDetectado(texto));
-          },
-          () => {}
+            reader.reset();
+            onDetectado(resultado.getText());
+          }
         );
 
         setIniciando(false);
       } catch (err) {
         console.error("Error scanner:", err);
-        const msg = err?.message?.includes("Permission")
+        const msg = err?.message?.includes("Permission") || err?.name === "NotAllowedError"
           ? "No se otorgó permiso para usar la cámara."
           : "No se pudo iniciar la cámara. Intentá recargar la página.";
         setErrorCam(msg);
@@ -57,81 +68,146 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
     return () => {
       document.body.style.overflow = "";
-      if (scannerRef.current) detener(scannerRef.current).catch(() => {});
+      try { readerRef.current?.reset(); } catch {}
     };
   }, []);
 
-  const handleCancelar = async () => {
-    if (scannerRef.current) await detener(scannerRef.current).catch(() => {});
+  const handleCancelar = () => {
+    try { readerRef.current?.reset(); } catch {}
     onCancelar?.();
   };
 
-  // Altura del área de video = pantalla - header - footer
-  const videoH = window.innerHeight - HEADER_H - FOOTER_H;
-
   const contenido = (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#000", display: "flex", flexDirection: "column" }}>
-
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "#000", display: "flex", flexDirection: "column",
+    }}>
       {/* Header */}
-      <div style={{ height: HEADER_H, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", background: "rgba(0,0,0,0.7)" }}>
+      <div style={{
+        flexShrink: 0, display: "flex", alignItems: "center",
+        justifyContent: "space-between", padding: "12px 16px",
+        background: "rgba(0,0,0,0.75)",
+      }}>
         <div>
-          <p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: 0 }}>Escaneá el DNI</p>
-          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, margin: 0 }}>
+          <p style={{ color: "#fff", fontSize: 14, fontWeight: 600, margin: 0 }}>
+            Escaneá el DNI
+          </p>
+          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 11, margin: "2px 0 0" }}>
             Código de barras del dorso o QR del frente
           </p>
         </div>
-        <button onClick={handleCancelar}
-          style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          ✕
-        </button>
+        <button onClick={handleCancelar} style={{
+          width: 32, height: 32, borderRadius: "50%",
+          background: "rgba(255,255,255,0.15)", border: "none",
+          color: "#fff", fontSize: 18, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>✕</button>
       </div>
 
-      {/* Video — altura fija explícita para que html5-qrcode funcione */}
-      <div style={{ position: "relative", width: "100%", height: videoH, flexShrink: 0, overflow: "hidden" }}>
-        <div id={SCANNER_ID} style={{ width: "100%", height: "100%" }} />
+      {/* Video — ocupa todo el espacio disponible */}
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        <video
+          ref={videoRef}
+          style={{
+            width: "100%", height: "100%",
+            objectFit: "cover",
+            display: "block",
+          }}
+          muted
+          playsInline
+        />
 
+        {/* Overlay carga */}
         {iniciando && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#000", gap: 12 }}>
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            background: "#000", gap: 12,
+          }}>
             <Spinner />
             <p style={{ color: "#fff", fontSize: 13 }}>Iniciando cámara...</p>
           </div>
         )}
 
+        {/* Overlay error */}
         {errorCam && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#000", gap: 12, padding: 24 }}>
+          <div style={{
+            position: "absolute", inset: 0,
+            display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center",
+            background: "#000", gap: 12, padding: 24,
+          }}>
             <span style={{ fontSize: 36 }}>📷</span>
             <p style={{ color: "#fff", fontSize: 13, textAlign: "center" }}>{errorCam}</p>
+          </div>
+        )}
+
+        {/* Marco guía — solo decorativo, la detección ocurre en todo el frame */}
+        {!iniciando && !errorCam && (
+          <div style={{
+            position: "absolute", inset: 0, pointerEvents: "none",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div style={{
+              width: 280, height: 160,
+              border: "2px solid rgba(255,255,255,0.5)",
+              borderRadius: 8, position: "relative",
+            }}>
+              {/* Esquinas */}
+              {[
+                { top: -2, left: -2, borderTop: "4px solid #60a5fa", borderLeft: "4px solid #60a5fa", borderRadius: "6px 0 0 0" },
+                { top: -2, right: -2, borderTop: "4px solid #60a5fa", borderRight: "4px solid #60a5fa", borderRadius: "0 6px 0 0" },
+                { bottom: -2, left: -2, borderBottom: "4px solid #60a5fa", borderLeft: "4px solid #60a5fa", borderRadius: "0 0 0 6px" },
+                { bottom: -2, right: -2, borderBottom: "4px solid #60a5fa", borderRight: "4px solid #60a5fa", borderRadius: "0 0 6px 0" },
+              ].map((s, i) => (
+                <div key={i} style={{ position: "absolute", width: 20, height: 20, ...s }} />
+              ))}
+              {/* Línea animada */}
+              <div style={{
+                position: "absolute", left: 4, right: 4, height: 2,
+                background: "rgba(96,165,250,0.8)",
+                animation: "scanLine 2s ease-in-out infinite",
+              }} />
+            </div>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div style={{ height: FOOTER_H, flexShrink: 0, display: "flex", alignItems: "center", padding: "0 16px", background: "rgba(0,0,0,0.7)" }}>
-        <button onClick={handleCancelar}
-          style={{ width: "100%", padding: "12px 0", borderRadius: 12, background: "rgba(255,255,255,0.12)", border: "none", color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
-          Cancelar
-        </button>
-      </div>
+      {!errorCam && (
+        <div style={{
+          flexShrink: 0, padding: "12px 16px",
+          background: "rgba(0,0,0,0.75)",
+        }}>
+          <button onClick={handleCancelar} style={{
+            width: "100%", padding: "12px 0", borderRadius: 12,
+            background: "rgba(255,255,255,0.12)", border: "none",
+            color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer",
+          }}>
+            Cancelar
+          </button>
+        </div>
+      )}
 
+      <style>{`
+        @keyframes scanLine {
+          0%   { top: 4px; }
+          50%  { top: calc(100% - 4px); }
+          100% { top: 4px; }
+        }
+      `}</style>
     </div>
   );
 
   return createPortal(contenido, document.body);
 }
 
-async function detener(scanner) {
-  try {
-    const state = scanner.getState();
-    if (state === 2 || state === 3) await scanner.stop();
-    scanner.clear();
-  } catch {}
-}
-
 function Spinner() {
   return (
-    <svg style={{ animation: "spin 1s linear infinite", width: 40, height: 40 }}
+    <svg style={{ width: 40, height: 40, animation: "spin 1s linear infinite" }}
       xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <style>{"@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }"}</style>
+      <style>{"@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}"}</style>
       <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="white" strokeWidth="4" />
       <path style={{ opacity: 0.75 }} fill="white"
         d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z" />
