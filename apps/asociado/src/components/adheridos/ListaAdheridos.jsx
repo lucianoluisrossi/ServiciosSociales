@@ -1,5 +1,6 @@
 import { useState } from "react";
 import FormAdherido from "./FormAdherido";
+import NuevoAdherido from "./NuevoAdherido";
 
 export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, onQuitarCambio, solicitudActiva }) {
   const [editando, setEditando] = useState(null);
@@ -71,8 +72,7 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
       {/* Formulario para agregar */}
       {agregando && (
         <div className="p-4 border-b border-blue-50 bg-blue-50/40">
-          <p className="text-xs font-semibold text-blue-700 mb-3">➕ Nuevo familiar</p>
-          <FormAdherido
+          <NuevoAdherido
             onGuardar={handleGuardarNuevo}
             onCancelar={() => setAgregando(false)}
           />
