@@ -65,8 +65,12 @@ export default function SubirDNI({ label, dni, lado, onSubido, onDatosExtraidos 
       const tokenResult = await user.getIdTokenResult();
       const dniAsociado = tokenResult.claims.dni;
 
+      // Si el DNI del adherido aún no fue ingresado (puede venir de la extracción del frente),
+      // usamos el DNI extraído o un identificador temporal
+      const dniAdherido = dni || resultado.datos?.socDocNro || `temp_${Date.now()}`;
+
       const storage = getStorage();
-      const path = `solicitudes/${dniAsociado}/${dni}/${lado}_${Date.now()}.jpg`;
+      const path = `solicitudes/${dniAsociado}/${dniAdherido}/${lado}_${Date.now()}.jpg`;
       const storageRef = ref(storage, path);
 
       await uploadBytes(storageRef, file, { contentType: file.type });
