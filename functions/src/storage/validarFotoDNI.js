@@ -51,16 +51,12 @@ exports.validarFotoDNI = onCall(
 Respondé ÚNICAMENTE con un objeto JSON, sin texto adicional:
 
 Si la imagen NO es válida:
-{"esValido": false, "motivo": "descripción breve del problema"}
+{"esValido": false, "motivo": "descripción breve del problema", "datos": {"socNom": null, "socDocNro": null, "cliFecNac": null}}
 
-Si la imagen ES válida, extraé también los datos del documento:
+Si la imagen ES válida (incluso si está rotada, con reflejo o levemente borrosa):
 {"esValido": true, "motivo": "ok", "datos": {"socNom": "APELLIDO NOMBRE", "socDocNro": "12345678", "cliFecNac": "YYYY-MM-DD"}}
 
-Aceptá la imagen si:
-- Se puede identificar que es el frente de un DNI argentino en cualquier formato, aunque tenga algo de reflejo, leve desenfoque, no esté perfectamente centrado o esté rotada en cualquier ángulo — eso es normal al fotografiar con celular
-- La imagen está rotada en cualquier ángulo — la rotación NO es motivo de rechazo
-- Formato nuevo: se ven campos como Apellido, Nombre, DNI, Fecha de Nacimiento
-- Formato tarjeta plástica: se ven campos APELLIDO/S, NOMBRE/S, NUMERO DE DOCUMENTO, y/o líneas MRZ (IDARG...)
+IMPORTANTE: intentá SIEMPRE extraer los datos aunque la imagen esté rotada, inclinada o no esté perfectamente encuadrada. La rotación NO es motivo de rechazo ni impide la extracción.
 
 Rechazá SOLO si:
 - Es claramente otro documento o un objeto que no es un DNI argentino
@@ -68,10 +64,10 @@ Rechazá SOLO si:
 - La imagen está completamente ilegible, en negro o en blanco
 - Es una foto de una persona, paisaje, pantalla u objeto que no es un documento
 
-Para la extracción de datos:
-- socNom: apellido y nombre completos en mayúsculas (en formato tarjeta: combiná APELLIDO/S + NOMBRE/S; también podés leerlo de la línea MRZ como "PINELLI<<JULIO<OMAR" → "PINELLI JULIO OMAR")
+Para la extracción de datos (intentalo siempre, en cualquier orientación):
+- socNom: apellido y nombre completos en mayúsculas (formato nuevo: campo Apellido + Nombre; formato tarjeta: APELLIDO/S + NOMBRE/S, o leelo de la línea MRZ "PINELLI<<JULIO<OMAR" → "PINELLI JULIO OMAR")
 - socDocNro: solo los dígitos del número de DNI, sin puntos ni espacios (ej: "17.835.382" → "17835382"; también podés leerlo de la línea MRZ "IDARG17835382")
-- cliFecNac: en el formato nuevo está en el frente; en el formato tarjeta plástica puede no estar en el frente — en ese caso poné null y se leerá del dorso
+- cliFecNac: en formato nuevo está en el frente; en formato tarjeta plástica puede no estar — poné null y se leerá del dorso
 - Si no podés leer algún dato con certeza, poné null en ese campo`
 
       : `Analizá esta imagen y determiná si podría ser el dorso de un Documento Nacional de Identidad (DNI) argentino, ya sea el formato nuevo o el formato tarjeta plástica anterior (con domicilio, fecha y lugar de nacimiento, huella dactilar y código de barras PDF417).
@@ -145,7 +141,17 @@ Para la extracción de datos:
       if (typeof resultado.esValido !== "boolean") throw new Error("Formato inesperado");
 
       if (!resultado.esValido) {
-        return { esValido: false, motivo: resultado.motivo ?? "" };
+        // Aunque sea inválido, devolvemos datos si la IA los extrajo
+        // (puede pasar con imágenes rotadas que la IA rechaza pero igual lee)
+        const respuesta = { esValido: false, motivo: resultado.motivo ?? "" };
+        if (lado === "frente" && resultado.datos) {
+          respuesta.datos = {
+            socNom:    resultado.datos.socNom    ?? null,
+            socDocNro: resultado.datos.socDocNro ?? null,
+            cliFecNac: resultado.datos.cliFecNac ?? null,
+          };
+        }
+        return respuesta;
       }
 
       // Válido — devolver datos extraídos según lado

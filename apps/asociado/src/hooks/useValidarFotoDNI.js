@@ -55,7 +55,8 @@ export function useValidarFotoDNI() {
     const { esValido, motivo, datos } = result.data;
 
     // La IA a veces rechaza por rotación aunque el prompt lo prohíbe.
-    // Si el único motivo es la rotación, lo tratamos como válido.
+    // Si el único motivo es la rotación, lo tratamos como válido y usamos
+    // los datos que igual pudo extraer.
     const esRechazoRotacion = !esValido && motivo &&
       /rotat|45|grado/i.test(motivo);
 
