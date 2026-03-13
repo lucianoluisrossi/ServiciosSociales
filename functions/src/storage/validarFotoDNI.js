@@ -46,7 +46,7 @@ exports.validarFotoDNI = onCall(
 
     // ── Prompt: distinto según lado ───────────────────────────────────────
     const prompt = lado === "frente"
-      ? `Analizá esta imagen y determiná si es el frente de un Documento Nacional de Identidad (DNI) argentino.
+      ? `Analizá esta imagen y determiná si es el frente de un Documento Nacional de Identidad (DNI) argentino, ya sea el formato nuevo (con foto grande y fondo celeste/verde) o el formato tarjeta plástica anterior (con campos APELLIDO/S, NOMBRE/S, NUMERO DE DOCUMENTO y zona MRZ con líneas de signos "<").
 
 Respondé ÚNICAMENTE con un objeto JSON, sin texto adicional:
 
@@ -57,8 +57,9 @@ Si la imagen ES válida, extraé también los datos del documento:
 {"esValido": true, "motivo": "ok", "datos": {"socNom": "APELLIDO NOMBRE", "socDocNro": "12345678", "cliFecNac": "YYYY-MM-DD"}}
 
 Aceptá la imagen si:
-- Se puede identificar que es el frente de un DNI argentino, aunque tenga algo de reflejo, leve desenfoque o no esté perfectamente centrado — eso es normal al fotografiar con celular
-- Se ven elementos típicos del frente: foto de la persona, nombre, apellido, número de DNI, fecha de nacimiento
+- Se puede identificar que es el frente de un DNI argentino en cualquier formato, aunque tenga algo de reflejo, leve desenfoque, no esté perfectamente centrado o esté rotada — eso es normal al fotografiar con celular
+- Formato nuevo: se ven campos como Apellido, Nombre, DNI, Fecha de Nacimiento
+- Formato tarjeta plástica: se ven campos APELLIDO/S, NOMBRE/S, NUMERO DE DOCUMENTO, y/o líneas MRZ (IDARG...)
 
 Rechazá SOLO si:
 - Es claramente otro documento o un objeto que no es un DNI argentino
@@ -67,26 +68,32 @@ Rechazá SOLO si:
 - Es una foto de una persona, paisaje, pantalla u objeto que no es un documento
 
 Para la extracción de datos:
-- socNom: apellido y nombre tal como figura en el DNI, en mayúsculas
-- socDocNro: solo los dígitos del número de DNI, sin puntos ni espacios
-- cliFecNac: fecha de nacimiento en formato YYYY-MM-DD (ej: 1990-05-23)
+- socNom: apellido y nombre completos en mayúsculas (en formato tarjeta: combiná APELLIDO/S + NOMBRE/S; también podés leerlo de la línea MRZ como "PINELLI<<JULIO<OMAR" → "PINELLI JULIO OMAR")
+- socDocNro: solo los dígitos del número de DNI, sin puntos ni espacios (ej: "17.835.382" → "17835382"; también podés leerlo de la línea MRZ "IDARG17835382")
+- cliFecNac: en el formato nuevo está en el frente; en el formato tarjeta plástica puede no estar en el frente — en ese caso poné null y se leerá del dorso
 - Si no podés leer algún dato con certeza, poné null en ese campo`
 
-      : `Analizá esta imagen y determiná si podría ser el dorso de un Documento Nacional de Identidad (DNI) argentino.
+      : `Analizá esta imagen y determiná si podría ser el dorso de un Documento Nacional de Identidad (DNI) argentino, ya sea el formato nuevo o el formato tarjeta plástica anterior (con domicilio, fecha y lugar de nacimiento, huella dactilar y código de barras PDF417).
 
 Respondé ÚNICAMENTE con un objeto JSON, sin texto adicional:
-{"esValido": true, "motivo": "ok"}
-o
+
+Si la imagen NO es válida:
 {"esValido": false, "motivo": "descripción breve del problema"}
 
+Si la imagen ES válida:
+{"esValido": true, "motivo": "ok", "datos": {"cliFecNac": "YYYY-MM-DD"}}
+
 Aceptá la imagen si:
-- Se ve algún elemento típico del dorso de un DNI argentino (código de barras, PDF417, texto con datos, fondo con guilloche, franja magnética, huella dactilar, etc.)
+- Se ve algún elemento típico del dorso de un DNI argentino (código de barras, PDF417, huella dactilar, domicilio, fecha de nacimiento, fondo con guilloche, etc.)
 - La imagen tiene algo de movimiento, reflejo o no está perfectamente encuadrada — eso es normal al fotografiar con celular
 
 Rechazá SOLO si:
 - Es claramente otro documento (pasaporte, licencia de conducir, tarjeta de crédito, etc.)
 - Es una foto de una persona, paisaje, pantalla u objeto que no es un documento
-- La imagen está completamente en blanco, negra o es ilegible`;
+- La imagen está completamente en blanco, negra o es ilegible
+
+Para la extracción de datos:
+- cliFecNac: si ves el campo "FECHA Y LUGAR DE NACIMIENTO" (formato tarjeta plástica, ej: "13 SET 1966"), convertilo a YYYY-MM-DD. Si no podés leerlo con certeza, poné null.`;
 
     // ── Llamada a Anthropic ────────────────────────────────────────────────
     let response;
@@ -139,14 +146,21 @@ Rechazá SOLO si:
         return { esValido: false, motivo: resultado.motivo ?? "" };
       }
 
-      // Válido — devolver datos extraídos si es el frente
+      // Válido — devolver datos extraídos según lado
       const respuesta = { esValido: true, motivo: resultado.motivo ?? "ok" };
-      if (lado === "frente" && resultado.datos) {
-        respuesta.datos = {
-          socNom:    resultado.datos.socNom    ?? null,
-          socDocNro: resultado.datos.socDocNro ?? null,
-          cliFecNac: resultado.datos.cliFecNac ?? null,
-        };
+      if (resultado.datos) {
+        if (lado === "frente") {
+          respuesta.datos = {
+            socNom:    resultado.datos.socNom    ?? null,
+            socDocNro: resultado.datos.socDocNro ?? null,
+            cliFecNac: resultado.datos.cliFecNac ?? null,
+          };
+        } else {
+          // Dorso: solo fecha de nacimiento (útil para DNI formato tarjeta plástica)
+          respuesta.datos = {
+            cliFecNac: resultado.datos.cliFecNac ?? null,
+          };
+        }
       }
       return respuesta;
 

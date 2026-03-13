@@ -52,8 +52,8 @@ export default function SubirDNI({ label, dni, lado, onSubido, onDatosExtraidos 
       return;
     }
 
-    // Si es el frente y hay datos extraídos, notificar al padre
-    if (lado === "frente" && resultado.datos && onDatosExtraidos) {
+    // Si hay datos extraídos, notificar al padre (frente: nombre+dni+fecha / dorso: fecha)
+    if (resultado.datos && onDatosExtraidos) {
       onDatosExtraidos(resultado.datos);
     }
 

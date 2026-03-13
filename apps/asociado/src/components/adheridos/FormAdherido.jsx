@@ -45,11 +45,15 @@ export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
     if (datos.cliFecNac) {
       const fecha = toInputDate(datos.cliFecNac);
       if (fecha) {
-        setForm((prev) => ({ ...prev, cliFecNac: fecha }));
+        // Solo precargar fecha del dorso si el campo está vacío (no sobreescribir lo que ya tiene)
+        setForm((prev) => {
+          if (prev.cliFecNac) return prev;
+          return { ...prev, cliFecNac: fecha };
+        });
         nuevasPrecarga.cliFecNac = true;
       }
     }
-    setPrecargados(nuevasPrecarga);
+    setPrecargados((prev) => ({ ...prev, ...nuevasPrecarga }));
     setErrores({});
   };
 
@@ -155,6 +159,7 @@ export default function FormAdherido({ inicial, onGuardar, onCancelar }) {
             dni={form.socDocNro}
             lado="dorso"
             onSubido={setFotoDorsoPath}
+            onDatosExtraidos={handleDatosExtraidos}
           />
         </div>
       </div>
