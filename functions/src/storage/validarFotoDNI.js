@@ -68,18 +68,21 @@ Para la extracción de datos:
 - cliFecNac: fecha de nacimiento en formato YYYY-MM-DD (ej: 1990-05-23)
 - Si no podés leer algún dato con certeza, poné null en ese campo`
 
-      : `Analizá esta imagen y determiná si muestra claramente el dorso de un Documento Nacional de Identidad (DNI) argentino.
+      : `Analizá esta imagen y determiná si podría ser el dorso de un Documento Nacional de Identidad (DNI) argentino.
 
 Respondé ÚNICAMENTE con un objeto JSON, sin texto adicional:
-{"esValido": true, "motivo": "descripción breve"}
+{"esValido": true, "motivo": "ok"}
 o
 {"esValido": false, "motivo": "descripción breve del problema"}
 
-Criterios para rechazar:
-- No es el dorso de un DNI argentino
-- Imagen muy borrosa o con mala iluminación
-- DNI no completamente visible o muy recortado
-- Imagen rotada más de 45 grados`;
+Aceptá la imagen si:
+- Se ve algún elemento típico del dorso de un DNI argentino (código de barras, PDF417, texto con datos, fondo con guilloche, franja magnética, huella dactilar, etc.)
+- La imagen tiene algo de movimiento, reflejo o no está perfectamente encuadrada — eso es normal al fotografiar con celular
+
+Rechazá SOLO si:
+- Es claramente otro documento (pasaporte, licencia de conducir, tarjeta de crédito, etc.)
+- Es una foto de una persona, paisaje, pantalla u objeto que no es un documento
+- La imagen está completamente en blanco, negra o es ilegible`;
 
     // ── Llamada a Anthropic ────────────────────────────────────────────────
     let response;
