@@ -48,11 +48,10 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
       setIntentosFallidos(nuevosIntentos);
       if (nuevosIntentos >= MAX_INTENTOS) {
         setDatosManual(true);
-        // Pequeño delay para que ZXing termine su cleanup antes de desmontar
-        setTimeout(() => setPaso(PASO.MANUAL), 150);
+        setPaso(PASO.MANUAL);
       } else {
         setMensajeError(`${resultado.error} (intento ${nuevosIntentos} de ${MAX_INTENTOS})`);
-        setTimeout(() => setPaso(PASO.SCANNER), 150);
+        setPaso(PASO.SCANNER);
       }
       return;
     }
@@ -68,8 +67,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
     setPrecargados(nuevasPrecarga);
     setDatosManual(false);
     setMensajeError(null);
-    // Delay para que ZXing haga su reset antes de desmontar el componente
-    setTimeout(() => setPaso(PASO.FORMULARIO), 150);
+    setPaso(PASO.FORMULARIO);
   };
 
   const handleErrorScanner = (msg) => {
@@ -184,9 +182,11 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
         </div>
       )}
 
-      {/* SCANNER */}
-      {paso === PASO.SCANNER && (
-        <div className="space-y-3">
+      {/* SCANNER — se mantiene montado aunque no sea el paso activo,
+           para evitar que el desmontaje cause pantalla negra */}
+      {(paso === PASO.SCANNER || paso === PASO.FORMULARIO || paso === PASO.MANUAL) && (
+        <div style={{ display: paso === PASO.SCANNER ? "block" : "none" }}
+             className="space-y-3">
           <div className="text-center">
             <p className="text-sm font-semibold text-gray-800">Escaneá el código del DNI</p>
             <p className="text-xs text-gray-500 mt-0.5">Código de barras del dorso o QR del frente</p>
@@ -197,6 +197,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
             </div>
           )}
           <ScannerDNI
+            activo={paso === PASO.SCANNER}
             onDetectado={handleDetectado}
             onError={handleErrorScanner}
             onCancelar={handleCancelarScanner}

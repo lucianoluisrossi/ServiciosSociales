@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from "@zxing/library";
 import { createPortal } from "react-dom";
 
-export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
+export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = true }) {
   const [iniciando, setIniciando] = useState(true);
   const [errorCam, setErrorCam]   = useState(null);
   const videoRef     = useRef(null);
@@ -75,7 +75,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
   const contenido = (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
-      background: "#000", display: "flex", flexDirection: "column",
+      background: "#000", display: activo ? "flex" : "none", flexDirection: "column",
     }}>
       {/* Header */}
       <div style={{
