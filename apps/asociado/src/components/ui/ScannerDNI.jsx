@@ -25,9 +25,9 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
           { facingMode: "environment" },
           {
             fps: 10,
-            qrbox: { width: 220, height: 120 },
-            aspectRatio: 1.6,
-            formatsToSupport: [6, 0], // PDF_417, QR_CODE
+            // qrbox más pequeño que el contenedor — deja margen para el algoritmo
+            qrbox: { width: 250, height: 150 },
+            // Sin aspectRatio forzado — dejar que la cámara use el suyo natural
           },
           (texto) => {
             if (detectadoRef.current) return;
@@ -63,26 +63,27 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
   return (
     <div className="space-y-3">
-      {/* Visor acotado — html5-qrcode inyecta el video acá */}
-      <div className="relative rounded-xl overflow-hidden bg-black mx-auto"
-           style={{ width: "100%", maxWidth: 320, height: 200 }}>
+      {/* 
+        Contenedor: dejamos que html5-qrcode maneje su propio tamaño de video,
+        pero limitamos la altura máxima del wrapper para que no sea enorme.
+        El video se muestra con object-fit: cover para recortar el exceso.
+      */}
+      <div className="relative rounded-xl overflow-hidden bg-black"
+           style={{ maxHeight: 280 }}>
 
-        <div id={SCANNER_ID} style={{ width: "100%", height: "100%" }} />
+        <div id={SCANNER_ID} className="w-full" />
 
-        {/* Override estilos que inyecta html5-qrcode */}
+        {/* Recortar altura excedente que inyecta html5-qrcode */}
         <style>{`
-          #${SCANNER_ID} video {
-            width: 100% !important;
-            height: 200px !important;
-            object-fit: cover !important;
-          }
+          #${SCANNER_ID} { overflow: hidden; max-height: 280px; }
+          #${SCANNER_ID} video { max-height: 280px; width: 100% !important; object-fit: cover; }
           #${SCANNER_ID} img { display: none !important; }
-          #${SCANNER_ID} > div:last-child { display: none !important; }
         `}</style>
 
         {/* Overlay carga */}
         {iniciando && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-2">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 gap-2"
+               style={{ minHeight: 200 }}>
             <Spinner />
             <p className="text-white text-xs">Iniciando cámara...</p>
           </div>
@@ -90,30 +91,17 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
         {/* Overlay error */}
         {errorCam && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 gap-2 p-4">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 gap-2 p-4"
+               style={{ minHeight: 200 }}>
             <span className="text-2xl">📷</span>
             <p className="text-white text-xs text-center">{errorCam}</p>
-          </div>
-        )}
-
-        {/* Marco guía */}
-        {!iniciando && !errorCam && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="border-2 border-white/60 rounded-lg relative"
-                 style={{ width: 220, height: 110 }}>
-              <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-blue-400 rounded-tl" />
-              <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-blue-400 rounded-tr" />
-              <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-blue-400 rounded-bl" />
-              <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-blue-400 rounded-br" />
-              <div className="absolute left-1 right-1 h-0.5 bg-blue-400/80 scanner-line" />
-            </div>
           </div>
         )}
       </div>
 
       {!errorCam && (
         <p className="text-xs text-center text-gray-500">
-          Apuntá el código de barras del dorso o el QR del frente al recuadro
+          Apuntá el código de barras del dorso o el QR del frente al recuadro azul
         </p>
       )}
 
