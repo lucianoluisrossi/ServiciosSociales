@@ -46,7 +46,7 @@ exports.validarFotoDNI = onCall(
 
     // ── Prompt: distinto según lado ───────────────────────────────────────
     const prompt = lado === "frente"
-      ? `Analizá esta imagen del frente de un DNI argentino.
+      ? `Analizá esta imagen y determiná si es el frente de un Documento Nacional de Identidad (DNI) argentino.
 
 Respondé ÚNICAMENTE con un objeto JSON, sin texto adicional:
 
@@ -56,11 +56,15 @@ Si la imagen NO es válida:
 Si la imagen ES válida, extraé también los datos del documento:
 {"esValido": true, "motivo": "ok", "datos": {"socNom": "APELLIDO NOMBRE", "socDocNro": "12345678", "cliFecNac": "YYYY-MM-DD"}}
 
-Criterios para rechazar:
-- No es el frente de un DNI argentino
-- Imagen muy borrosa o con mala iluminación
-- DNI no completamente visible o muy recortado
-- Imagen rotada más de 45 grados
+Aceptá la imagen si:
+- Se puede identificar que es el frente de un DNI argentino, aunque tenga algo de reflejo, leve desenfoque o no esté perfectamente centrado — eso es normal al fotografiar con celular
+- Se ven elementos típicos del frente: foto de la persona, nombre, apellido, número de DNI, fecha de nacimiento
+
+Rechazá SOLO si:
+- Es claramente otro documento o un objeto que no es un DNI argentino
+- Es el dorso del DNI (no el frente)
+- La imagen está completamente ilegible, en negro o en blanco
+- Es una foto de una persona, paisaje, pantalla u objeto que no es un documento
 
 Para la extracción de datos:
 - socNom: apellido y nombre tal como figura en el DNI, en mayúsculas
