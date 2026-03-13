@@ -21,5 +21,8 @@
     "@tailwindcss/vite": "^4.2.1",
     "firebase-tools": "^13.0.0",
     "tailwindcss": "^4.2.1"
+  },
+  "dependencies": {
+    "@zxing/library": "^0.21.3"
   }
 }
