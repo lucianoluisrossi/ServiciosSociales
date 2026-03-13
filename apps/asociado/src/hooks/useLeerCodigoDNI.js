@@ -1,26 +1,44 @@
 /**
  * useLeerCodigoDNI
  * Parsea el texto crudo leído por ScannerDNI.
- * El scanner maneja la detección — este hook solo procesa el resultado.
  *
- * Formato DNI argentino:
- * APELLIDO@NOMBRE@SEXO@DNI@EJEMPLAR@FECHA_NAC@FECHA_EMISION@@CUIL
+ * Formato real del DNI argentino (confirmado):
+ * 00710802830 @ ROSSI @ LUCIANO LUIS @ M @ 23692560 @ B @ 23/12/1973 @ 19/09/2023 @ 239
+ * [0] CUIL_PARCIAL [1] APELLIDO [2] NOMBRE [3] SEXO [4] DNI [5] EJEMPLAR [6] FECHA_NAC [7] FECHA_EMISION [8] ...
+ *
+ * Algunos DNI más viejos no tienen el campo CUIL al inicio:
+ * APELLIDO @ NOMBRE @ SEXO @ DNI @ EJEMPLAR @ FECHA_NAC @ FECHA_EMISION ...
  */
 
 export function parsearCodigoDNI(texto) {
   if (!texto) return null;
 
   const partes = texto.split("@");
-  if (partes.length < 6) return null;
+  if (partes.length < 7) return null;
 
-  const apellido    = partes[0]?.trim();
-  const nombre      = partes[1]?.trim();
-  const dni         = partes[3]?.trim().replace(/\D/g, "");
-  const fechaNacRaw = partes[5]?.trim(); // DD/MM/AAAA
-  const cuil        = partes[8]?.trim().replace(/\D/g, "") || null;
+  let apellido, nombre, dni, fechaNacRaw;
+
+  // Detectar formato: si partes[0] son solo dígitos → tiene CUIL al inicio
+  const primerCampo = partes[0]?.trim();
+  const esFormatoConCuil = /^\d+$/.test(primerCampo);
+
+  if (esFormatoConCuil) {
+    // Formato nuevo: CUIL @ APELLIDO @ NOMBRE @ SEXO @ DNI @ EJEMPLAR @ FECHA_NAC ...
+    apellido    = partes[1]?.trim();
+    nombre      = partes[2]?.trim();
+    dni         = partes[4]?.trim().replace(/\D/g, "");
+    fechaNacRaw = partes[6]?.trim();
+  } else {
+    // Formato viejo: APELLIDO @ NOMBRE @ SEXO @ DNI @ EJEMPLAR @ FECHA_NAC ...
+    apellido    = partes[0]?.trim();
+    nombre      = partes[1]?.trim();
+    dni         = partes[3]?.trim().replace(/\D/g, "");
+    fechaNacRaw = partes[5]?.trim();
+  }
 
   if (!apellido || !nombre || !dni || dni.length < 7) return null;
 
+  // Convertir DD/MM/AAAA → YYYY-MM-DD
   let cliFecNac = null;
   if (fechaNacRaw && /\d{2}\/\d{2}\/\d{4}/.test(fechaNacRaw)) {
     const [dia, mes, anio] = fechaNacRaw.split("/");
@@ -31,7 +49,7 @@ export function parsearCodigoDNI(texto) {
     socNom:    `${apellido} ${nombre}`,
     socDocNro: dni,
     cliFecNac,
-    cuil,
+    cuil:      null,
   };
 }
 

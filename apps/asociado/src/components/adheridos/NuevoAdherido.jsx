@@ -16,7 +16,7 @@ const MAX_INTENTOS = 3;
 const PASO = {
   BIENVENIDA: "bienvenida",
   SCANNER:    "scanner",
-  DEBUG:      "debug",
+
   MANUAL:     "manual",
   FORMULARIO: "formulario",
 };
@@ -26,7 +26,6 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
   const [intentosFallidos, setIntentosFallidos] = useState(0);
   const [mensajeError, setMensajeError] = useState(null);
   const [datosManual, setDatosManual] = useState(false);
-  const [debugTexto, setDebugTexto]   = useState(null);
 
   const [form, setForm]               = useState({ socNom: "", socDocNro: "", cliFecNac: "", pareDsc: "" });
   const [precargados, setPrecargados] = useState({});
@@ -40,10 +39,35 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
   const { validar }   = useValidarFotoDNI();
   const { toast, ToastContainer } = useToast();
 
-  // ── Scanner detectó un código — DEBUG: mostrar texto crudo ──────────
+  // ── Scanner detectó un código ────────────────────────────────────────
   const handleDetectado = (texto) => {
-    setDebugTexto(texto);
-    setPaso(PASO.DEBUG);
+    const resultado = procesar(texto);
+
+    if (!resultado.ok) {
+      const nuevosIntentos = intentosFallidos + 1;
+      setIntentosFallidos(nuevosIntentos);
+      if (nuevosIntentos >= MAX_INTENTOS) {
+        setDatosManual(true);
+        setPaso(PASO.MANUAL);
+      } else {
+        setMensajeError(`${resultado.error} (intento ${nuevosIntentos} de ${MAX_INTENTOS})`);
+        setPaso(PASO.SCANNER);
+      }
+      return;
+    }
+
+    const nuevasPrecarga = {};
+    const nuevoForm = { socNom: "", socDocNro: "", cliFecNac: "", pareDsc: "" };
+    const d = resultado.datos;
+    if (d.socNom)    { nuevoForm.socNom    = d.socNom;                    nuevasPrecarga.socNom    = true; }
+    if (d.socDocNro) { nuevoForm.socDocNro = d.socDocNro;                 nuevasPrecarga.socDocNro = true; }
+    if (d.cliFecNac) { const f = toInputDate(d.cliFecNac); if (f) { nuevoForm.cliFecNac = f; nuevasPrecarga.cliFecNac = true; } }
+
+    setForm(nuevoForm);
+    setPrecargados(nuevasPrecarga);
+    setDatosManual(false);
+    setMensajeError(null);
+    setPaso(PASO.FORMULARIO);
   };
 
   const handleErrorScanner = (msg) => {
@@ -177,30 +201,6 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
           />
         </div>
       )}
-
-      {/* DEBUG — mostrar texto crudo del código */}
-      {paso === PASO.DEBUG && (
-        <div className="space-y-3">
-          <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-3">
-            <p className="text-xs font-bold text-yellow-800 mb-2">🔍 Texto leído del código:</p>
-            <p className="text-xs font-mono break-all bg-white border border-yellow-200 rounded p-2 text-gray-800 select-all">
-              {debugTexto}
-            </p>
-            <p className="text-xs text-yellow-600 mt-2">
-              Copiá este texto y enviáselo al desarrollador.
-            </p>
-          </div>
-          <button onClick={() => { setPaso(PASO.SCANNER); setDebugTexto(null); }}
-            className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            Volver a escanear
-          </button>
-          <button onClick={() => setPaso(PASO.BIENVENIDA)}
-            className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">
-            Cancelar
-          </button>
-        </div>
-      )}
-
       {/* MANUAL */}
       {paso === PASO.MANUAL && (
         <div className="space-y-3">
