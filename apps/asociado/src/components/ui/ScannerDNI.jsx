@@ -42,9 +42,9 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
             if (detectadoRef.current) return;
             detectadoRef.current = true;
             const texto = resultado.getText();
-            // Primero notificar, luego resetear — evita pantalla negra
-            onDetectado(texto);
-            setTimeout(() => { try { reader.reset(); } catch {} }, 100);
+            // Sacar del contexto de ZXing antes de notificar a React
+            // Evita que el re-render interrumpa el stream
+            setTimeout(() => onDetectado(texto), 0);
           }
         );
 
@@ -63,7 +63,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
 
     return () => {
       document.body.style.overflow = "";
-      try { readerRef.current?.reset(); } catch {}
+      // No llamamos reset() acá — lo hace handleCancelar cuando corresponde
     };
   }, []);
 
