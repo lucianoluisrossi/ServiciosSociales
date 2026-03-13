@@ -31,16 +31,10 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
     const iniciar = async () => {
       try {
-        // Obtener cámara trasera via API nativa (ZXing 0.21 no tiene listVideoInputDevices)
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const camaras = devices.filter((d) => d.kind === "videoinput");
-        const trasera = camaras.find((d) => /back|rear|environment/i.test(d.label))
-          || camaras[camaras.length - 1];
-
-        const deviceId = trasera?.deviceId || undefined;
-
-        await reader.decodeFromVideoDevice(
-          deviceId,
+        // Usar decodeFromConstraints — no necesita listar cámaras,
+        // le pasamos facingMode directamente
+        await reader.decodeFromConstraints(
+          { video: { facingMode: "environment" } },
           videoRef.current,
           (resultado, error) => {
             if (error) return; // frame sin código — normal
