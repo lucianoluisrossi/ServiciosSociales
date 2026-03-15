@@ -182,27 +182,13 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
         </div>
       )}
 
-      {/* SCANNER — se mantiene montado aunque no sea el paso activo,
-           para evitar que el desmontaje cause pantalla negra */}
-      {(paso === PASO.SCANNER || paso === PASO.FORMULARIO || paso === PASO.MANUAL) && (
-        <div style={{ display: paso === PASO.SCANNER ? "block" : "none" }}
-             className="space-y-3">
-          <div className="text-center">
-            <p className="text-sm font-semibold text-gray-800">Escaneá el código del DNI</p>
-            <p className="text-xs text-gray-500 mt-0.5">Código de barras del dorso o QR del frente</p>
-          </div>
-          {mensajeError && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              <p className="text-xs text-amber-700">{mensajeError}</p>
-            </div>
-          )}
-          <ScannerDNI
-            activo={paso === PASO.SCANNER}
-            onDetectado={handleDetectado}
-            onError={handleErrorScanner}
-            onCancelar={handleCancelarScanner}
-          />
-        </div>
+      {/* SCANNER — se monta y desmonta limpiamente */}
+      {paso === PASO.SCANNER && (
+        <ScannerDNI
+          onDetectado={handleDetectado}
+          onError={handleErrorScanner}
+          onCancelar={handleCancelarScanner}
+        />
       )}
       {/* MANUAL */}
       {paso === PASO.MANUAL && (

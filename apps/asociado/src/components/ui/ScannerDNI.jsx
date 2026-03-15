@@ -1,18 +1,22 @@
 /**
- * ScannerDNI — pantalla completa
- * Vuelve a html5-qrcode que funcionaba, ahora en modal fullscreen via portal.
- * Sin CSS override, sin aspectRatio, sin maxHeight — la config original.
+ * ScannerDNI
+ * Scanner fullscreen con html5-qrcode.
+ * Se monta/desmonta limpiamente — sin portal, sin display:none.
  */
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 
 const SCANNER_ID = "scanner-dni-container";
 
-export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = true }) {
+export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
   const [iniciando, setIniciando] = useState(true);
   const [errorCam, setErrorCam]   = useState(null);
   const scannerRef                = useRef(null);
   const detectadoRef              = useRef(false);
+  const onDetectadoRef            = useRef(onDetectado);
+
+  // Mantener ref actualizada sin re-ejecutar el effect
+  useEffect(() => { onDetectadoRef.current = onDetectado; }, [onDetectado]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -24,15 +28,13 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
 
         await scanner.start(
           { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-          },
+          { fps: 10, qrbox: { width: 250, height: 150 } },
           (texto) => {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
-            // Sacar del contexto de html5-qrcode antes de notificar a React
-            setTimeout(() => onDetectado(texto), 0);
+            // Usar ref para evitar closure stale
+            const cb = onDetectadoRef.current;
+            setTimeout(() => cb(texto), 0);
           },
           () => {}
         );
@@ -53,9 +55,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
 
     return () => {
       document.body.style.overflow = "";
-      if (scannerRef.current) {
-        detener(scannerRef.current).catch(() => {});
-      }
+      if (scannerRef.current) detener(scannerRef.current).catch(() => {});
     };
   }, []);
 
@@ -64,12 +64,10 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
     onCancelar?.();
   };
 
-  const contenido = (
+  return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
-      background: "#000",
-      flexDirection: "column",
-      display: activo ? "flex" : "none",
+      background: "#000", display: "flex", flexDirection: "column",
     }}>
       {/* Header */}
       <div style={{
@@ -93,7 +91,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
         }}>✕</button>
       </div>
 
-      {/* Video — html5-qrcode maneja el tamaño libremente */}
+      {/* Video */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         <div id={SCANNER_ID} style={{ width: "100%" }} />
 
@@ -122,10 +120,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
 
       {/* Footer */}
       {!errorCam && (
-        <div style={{
-          flexShrink: 0, padding: "12px 16px",
-          background: "rgba(0,0,0,0.75)",
-        }}>
+        <div style={{ flexShrink: 0, padding: "12px 16px", background: "rgba(0,0,0,0.75)" }}>
           <button onClick={handleCancelar} style={{
             width: "100%", padding: "12px 0", borderRadius: 12,
             background: "rgba(255,255,255,0.12)", border: "none",
@@ -137,8 +132,6 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
       )}
     </div>
   );
-
-  return contenido;
 }
 
 async function detener(scanner) {
