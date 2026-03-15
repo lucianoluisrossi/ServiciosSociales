@@ -5,7 +5,6 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { createPortal } from "react-dom";
 
 const SCANNER_ID = "scanner-dni-container";
 
@@ -139,7 +138,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
     </div>
   );
 
-  return createPortal(contenido, document.body);
+  return contenido;
 }
 
 async function detener(scanner) {
