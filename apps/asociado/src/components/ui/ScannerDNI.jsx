@@ -1,58 +1,49 @@
 /**
  * ScannerDNI — pantalla completa
- * Usa ZXing decodeFromVideoDevice directamente, sin html5-qrcode.
- * Controlamos el <video> nosotros — sin problemas de dimensiones ni CSS.
+ * Vuelve a html5-qrcode que funcionaba, ahora en modal fullscreen via portal.
+ * Sin CSS override, sin aspectRatio, sin maxHeight — la config original.
  */
 import { useEffect, useRef, useState } from "react";
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from "@zxing/library";
+import { Html5Qrcode } from "html5-qrcode";
 import { createPortal } from "react-dom";
+
+const SCANNER_ID = "scanner-dni-container";
 
 export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = true }) {
   const [iniciando, setIniciando] = useState(true);
   const [errorCam, setErrorCam]   = useState(null);
-  const videoRef     = useRef(null);
-  const readerRef    = useRef(null);
-  const detectadoRef = useRef(false);
+  const scannerRef                = useRef(null);
+  const detectadoRef              = useRef(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
-    const hints = new Map();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.PDF_417,
-      BarcodeFormat.QR_CODE,
-    ]);
-    hints.set(DecodeHintType.TRY_HARDER, true);
-
-    const reader = new BrowserMultiFormatReader(hints, {
-      delayBetweenScanAttempts: 100,
-    });
-    readerRef.current = reader;
-
     const iniciar = async () => {
       try {
-        // Usar decodeFromConstraints — no necesita listar cámaras,
-        // le pasamos facingMode directamente
-        await reader.decodeFromConstraints(
-          { video: { facingMode: "environment" } },
-          videoRef.current,
-          (resultado, error) => {
-            if (error) return; // frame sin código — normal
-            if (!resultado) return;
+        const scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
+        scannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 150 },
+          },
+          (texto) => {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
-            const texto = resultado.getText();
-            // Sacar del contexto de ZXing antes de notificar a React
-            // Evita que el re-render interrumpa el stream
+            // Sacar del contexto de html5-qrcode antes de notificar a React
             setTimeout(() => onDetectado(texto), 0);
-          }
+          },
+          () => {}
         );
 
         setIniciando(false);
       } catch (err) {
         console.error("Error scanner:", err);
-        // DEBUG: mostrar error detallado en pantalla
-        const msg = `${err?.name || "Error"}: ${err?.message || "sin mensaje"}`;
+        const msg = err?.message?.includes("Permission") || err?.name === "NotAllowedError"
+          ? "No se otorgó permiso para usar la cámara."
+          : "No se pudo iniciar la cámara. Intentá recargar la página.";
         setErrorCam(msg);
         setIniciando(false);
         onError?.(msg);
@@ -63,19 +54,23 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
 
     return () => {
       document.body.style.overflow = "";
-      // No llamamos reset() acá — lo hace handleCancelar cuando corresponde
+      if (scannerRef.current) {
+        detener(scannerRef.current).catch(() => {});
+      }
     };
   }, []);
 
-  const handleCancelar = () => {
-    try { readerRef.current?.reset(); } catch {}
+  const handleCancelar = async () => {
+    if (scannerRef.current) await detener(scannerRef.current).catch(() => {});
     onCancelar?.();
   };
 
   const contenido = (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
-      background: "#000", display: activo ? "flex" : "none", flexDirection: "column",
+      background: "#000",
+      flexDirection: "column",
+      display: activo ? "flex" : "none",
     }}>
       {/* Header */}
       <div style={{
@@ -99,72 +94,29 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
         }}>✕</button>
       </div>
 
-      {/* Video — ocupa todo el espacio disponible */}
+      {/* Video — html5-qrcode maneja el tamaño libremente */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <video
-          ref={videoRef}
-          style={{
-            width: "100%", height: "100%",
-            objectFit: "cover",
-            display: "block",
-          }}
-          muted
-          playsInline
-        />
+        <div id={SCANNER_ID} style={{ width: "100%" }} />
 
-        {/* Overlay carga */}
         {iniciando && (
           <div style={{
-            position: "absolute", inset: 0,
-            display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center",
-            background: "#000", gap: 12,
+            position: "absolute", inset: 0, display: "flex",
+            flexDirection: "column", alignItems: "center",
+            justifyContent: "center", background: "#000", gap: 12,
           }}>
             <Spinner />
             <p style={{ color: "#fff", fontSize: 13 }}>Iniciando cámara...</p>
           </div>
         )}
 
-        {/* Overlay error */}
         {errorCam && (
           <div style={{
-            position: "absolute", inset: 0,
-            display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center",
-            background: "#000", gap: 12, padding: 24,
+            position: "absolute", inset: 0, display: "flex",
+            flexDirection: "column", alignItems: "center",
+            justifyContent: "center", background: "#000", gap: 12, padding: 24,
           }}>
             <span style={{ fontSize: 36 }}>📷</span>
             <p style={{ color: "#fff", fontSize: 13, textAlign: "center" }}>{errorCam}</p>
-          </div>
-        )}
-
-        {/* Marco guía — solo decorativo, la detección ocurre en todo el frame */}
-        {!iniciando && !errorCam && (
-          <div style={{
-            position: "absolute", inset: 0, pointerEvents: "none",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div style={{
-              width: 280, height: 160,
-              border: "2px solid rgba(255,255,255,0.5)",
-              borderRadius: 8, position: "relative",
-            }}>
-              {/* Esquinas */}
-              {[
-                { top: -2, left: -2, borderTop: "4px solid #60a5fa", borderLeft: "4px solid #60a5fa", borderRadius: "6px 0 0 0" },
-                { top: -2, right: -2, borderTop: "4px solid #60a5fa", borderRight: "4px solid #60a5fa", borderRadius: "0 6px 0 0" },
-                { bottom: -2, left: -2, borderBottom: "4px solid #60a5fa", borderLeft: "4px solid #60a5fa", borderRadius: "0 0 0 6px" },
-                { bottom: -2, right: -2, borderBottom: "4px solid #60a5fa", borderRight: "4px solid #60a5fa", borderRadius: "0 0 6px 0" },
-              ].map((s, i) => (
-                <div key={i} style={{ position: "absolute", width: 20, height: 20, ...s }} />
-              ))}
-              {/* Línea animada */}
-              <div style={{
-                position: "absolute", left: 4, right: 4, height: 2,
-                background: "rgba(96,165,250,0.8)",
-                animation: "scanLine 2s ease-in-out infinite",
-              }} />
-            </div>
           </div>
         )}
       </div>
@@ -184,18 +136,18 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar, activo = 
           </button>
         </div>
       )}
-
-      <style>{`
-        @keyframes scanLine {
-          0%   { top: 4px; }
-          50%  { top: calc(100% - 4px); }
-          100% { top: 4px; }
-        }
-      `}</style>
     </div>
   );
 
   return createPortal(contenido, document.body);
+}
+
+async function detener(scanner) {
+  try {
+    const state = scanner.getState();
+    if (state === 2 || state === 3) await scanner.stop();
+    scanner.clear();
+  } catch {}
 }
 
 function Spinner() {
