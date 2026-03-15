@@ -32,8 +32,9 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
           (texto) => {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
-            // Usar ref para evitar closure stale
             const cb = onDetectadoRef.current;
+            // Alert temporal para confirmar que el callback se dispara
+            alert("Detectado: " + texto.substring(0, 30));
             setTimeout(() => cb(texto), 0);
           },
           () => {}
