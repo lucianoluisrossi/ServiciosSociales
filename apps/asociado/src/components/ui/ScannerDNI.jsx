@@ -28,12 +28,14 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 150 } },
+          {
+            fps: 10,
+            // Sin qrbox — detecta en todo el frame, no depende de dimensiones del contenedor
+          },
           (texto) => {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
             const cb = onDetectadoRef.current;
-            // Alert temporal para confirmar que el callback se dispara
             alert("Detectado: " + texto.substring(0, 30));
             setTimeout(() => cb(texto), 0);
           },
