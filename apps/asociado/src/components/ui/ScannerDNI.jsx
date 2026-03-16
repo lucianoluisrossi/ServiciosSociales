@@ -1,7 +1,8 @@
 /**
- * ScannerDNI
- * Scanner fullscreen con html5-qrcode.
- * Se monta/desmonta limpiamente — sin portal, sin display:none.
+ * ScannerDNI — pantalla completa
+ * IMPORTANTE: useBarCodeDetectorIfSupported: false
+ * La BarcodeDetector nativa de Android NO soporta PDF417.
+ * Forzamos ZXing para que funcione con el código del DNI argentino.
  */
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
@@ -15,7 +16,6 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
   const detectadoRef              = useRef(false);
   const onDetectadoRef            = useRef(onDetectado);
 
-  // Mantener ref actualizada sin re-ejecutar el effect
   useEffect(() => { onDetectadoRef.current = onDetectado; }, [onDetectado]);
 
   useEffect(() => {
@@ -23,20 +23,25 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
     const iniciar = async () => {
       try {
-        const scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
+        // experimentalFeatures.useBarCodeDetectorIfSupported: false
+        // → fuerza ZXing en lugar de la BarcodeDetector nativa de Android
+        // → necesario porque BarcodeDetector NO soporta PDF417 (código del DNI argentino)
+        const scanner = new Html5Qrcode(SCANNER_ID, {
+          verbose: false,
+          experimentalFeatures: { useBarCodeDetectorIfSupported: false },
+        });
         scannerRef.current = scanner;
 
         await scanner.start(
           { facingMode: "environment" },
           {
             fps: 10,
-            // Sin qrbox — detecta en todo el frame, no depende de dimensiones del contenedor
+            qrbox: { width: 250, height: 150 },
           },
           (texto) => {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
             const cb = onDetectadoRef.current;
-            alert("Detectado: " + texto.substring(0, 30));
             setTimeout(() => cb(texto), 0);
           },
           () => {}
@@ -94,7 +99,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
         }}>✕</button>
       </div>
 
-      {/* Video */}
+      {/* Video — html5-qrcode maneja el tamaño */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         <div id={SCANNER_ID} style={{ width: "100%" }} />
 
