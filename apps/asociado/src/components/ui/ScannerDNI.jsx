@@ -1,8 +1,7 @@
 /**
  * ScannerDNI — pantalla completa
- * IMPORTANTE: useBarCodeDetectorIfSupported: false
- * La BarcodeDetector nativa de Android NO soporta PDF417.
- * Forzamos ZXing para que funcione con el código del DNI argentino.
+ * Configuración exacta del commit 175bf5e que funcionaba,
+ * con formatsToSupport explícito para PDF417 y QR.
  */
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
@@ -20,29 +19,29 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
+    let scanner = null;
 
     const iniciar = async () => {
       try {
-        // experimentalFeatures.useBarCodeDetectorIfSupported: false
-        // → fuerza ZXing en lugar de la BarcodeDetector nativa de Android
-        // → necesario porque BarcodeDetector NO soporta PDF417 (código del DNI argentino)
-        const scanner = new Html5Qrcode(SCANNER_ID, {
-          verbose: false,
-          experimentalFeatures: { useBarCodeDetectorIfSupported: false },
-        });
+        scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
         scannerRef.current = scanner;
 
         await scanner.start(
           { facingMode: "environment" },
           {
             fps: 10,
-            qrbox: { width: 250, height: 150 },
+            qrbox: { width: 280, height: 180 },
+            aspectRatio: 1.6,
+            formatsToSupport: [
+              6,  // PDF_417
+              0,  // QR_CODE
+            ],
           },
           (texto) => {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
             const cb = onDetectadoRef.current;
-            setTimeout(() => cb(texto), 0);
+            detener(scanner).then(() => cb(texto));
           },
           () => {}
         );
@@ -99,7 +98,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
         }}>✕</button>
       </div>
 
-      {/* Video — html5-qrcode maneja el tamaño */}
+      {/* Video */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         <div id={SCANNER_ID} style={{ width: "100%" }} />
 
