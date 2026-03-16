@@ -11,7 +11,7 @@ export default function PanelPage() {
   const auth = getAuth();
   const navigate = useNavigate();
   const { titular, adheridos, loading, error, recargar } = useAdheridos();
-  const { cambios, solicitudActual, agregarCambio, quitarCambio, enviarSolicitud, enviando } = useSolicitud();
+  const { cambios, solicitudActual, tienePendiente, agregarCambio, quitarCambio, enviarSolicitud, enviando } = useSolicitud();
 
   console.log("titular en PanelPage:", titular);
 
@@ -84,7 +84,7 @@ export default function PanelPage() {
           cambios={cambios}
           onAgregarCambio={agregarCambio}
           onQuitarCambio={quitarCambio}
-          solicitudActiva={false}
+          solicitudActiva={tienePendiente}
         />
 
         {cambios.length > 0 && (
@@ -95,6 +95,7 @@ export default function PanelPage() {
             onQuitarCambio={quitarCambio}
             onEnviar={enviarSolicitud}
             enviando={enviando}
+            tienePendiente={tienePendiente}
           />
         )}
       </main>

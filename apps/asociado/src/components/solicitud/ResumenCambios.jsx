@@ -1,11 +1,11 @@
 import { useState } from "react";
 
-export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCambio, onEnviar, enviando }) {
-  const [error, setError]       = useState(null);
-  const [enviado, setEnviado]   = useState(false);
-  const [codArea, setCodArea]   = useState("");
-  const [celular, setCelular]   = useState("");
-  const [errTel, setErrTel]     = useState({});
+export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCambio, onEnviar, enviando, tienePendiente }) {
+  const [error, setError] = useState(null);
+  const [enviado, setEnviado] = useState(false);
+  const [codArea, setCodArea] = useState("");
+  const [celular, setCelular] = useState("");
+  const [errTel, setErrTel] = useState({});
 
   const validarTelefono = () => {
     const e = {};
@@ -151,10 +151,10 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
       <div className="px-4 py-3 border-t border-gray-100">
         <button
           onClick={handleEnviar}
-          disabled={enviando}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+          disabled={enviando || tienePendiente}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
         >
-          {enviando ? "Enviando..." : "Enviar solicitud de cambios"}
+          {enviando ? "Enviando..." : tienePendiente ? "Solicitud pendiente de revisión" : "Enviar solicitud de cambios"}
         </button>
         <p className="text-xs text-gray-400 text-center mt-2">
           Los cambios serán revisados por CELTA antes de aplicarse.

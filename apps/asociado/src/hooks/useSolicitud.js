@@ -61,6 +61,9 @@ export function useSolicitud() {
 
   const enviarSolicitud = useCallback(async (clicod, datosTitular, contacto) => {
     if (cambios.length === 0) return;
+    if (solicitudActual?.estado === "pendiente") {
+      throw new Error("Ya tenés una solicitud pendiente de revisión. Esperá a que sea resuelta.");
+    }
     setEnviando(true);
 
     try {
@@ -69,24 +72,24 @@ export function useSolicitud() {
       const dniAsociado = tokenResult.claims.dni;
       await addDoc(collection(db, "solicitudes"), {
         titularDni: dniAsociado,
-        clicod:     clicod ?? null,
+        clicod: clicod ?? null,
         titular: {
-          titNom:    datosTitular?.titNom    ?? null,
-          sumNro:    datosTitular?.sumNro    ?? null,
+          titNom: datosTitular?.titNom ?? null,
+          sumNro: datosTitular?.sumNro ?? null,
           socDocNro: datosTitular?.socDocNro ?? null,
         },
         celularContacto: {
           codArea: contacto?.codArea ?? null,
-          numero:  contacto?.celular ?? null,
+          numero: contacto?.celular ?? null,
           // Número completo en formato Argentina para facilitar el uso desde el panel
           completo: contacto ? `+549${contacto.codArea}${contacto.celular}` : null,
         },
         cambios,
         // Flag para el empleado: indica si algún cambio fue ingresado manualmente
         tieneIngresosManual: cambios.some((c) => c.datos?.datosManual === true),
-        estado:        "pendiente",
-        creadoEn:      serverTimestamp(),
-        revisadoPor:   null,
+        estado: "pendiente",
+        creadoEn: serverTimestamp(),
+        revisadoPor: null,
         motivoRechazo: null,
       });
       setCambios([]);
@@ -95,7 +98,9 @@ export function useSolicitud() {
     } finally {
       setEnviando(false);
     }
-  }, [cambios, auth, db]);
+  }, [cambios, solicitudActual, auth, db]);
 
-  return { cambios, solicitudActual, agregarCambio, quitarCambio, enviarSolicitud, enviando };
+  const tienePendiente = solicitudActual?.estado === "pendiente";
+
+  return { cambios, solicitudActual, tienePendiente, agregarCambio, quitarCambio, enviarSolicitud, enviando };
 }
