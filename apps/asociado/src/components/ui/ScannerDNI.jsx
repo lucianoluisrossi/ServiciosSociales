@@ -41,7 +41,9 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
             const cb = onDetectadoRef.current;
-            // Notificar primero — el desmontaje del componente detiene el scanner
+            // Ocultar el div del scanner inmediatamente para evitar pantalla negra
+            const el = document.getElementById(SCANNER_ID);
+            if (el) el.style.visibility = "hidden";
             cb(texto);
           },
           () => {}
