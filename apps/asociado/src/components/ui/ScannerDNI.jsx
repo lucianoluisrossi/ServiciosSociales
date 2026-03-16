@@ -41,7 +41,8 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
             if (detectadoRef.current) return;
             detectadoRef.current = true;
             const cb = onDetectadoRef.current;
-            detener(scanner).then(() => cb(texto));
+            // Notificar primero — el desmontaje del componente detiene el scanner
+            cb(texto);
           },
           () => {}
         );
