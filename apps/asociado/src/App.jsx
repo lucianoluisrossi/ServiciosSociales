@@ -1,28 +1,23 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
-import LoginPage  from "./pages/LoginPage.jsx";
-import PanelPage  from "./pages/PanelPage.jsx";
+import LoginPage         from "./pages/LoginPage.jsx";
+import PanelPage         from "./pages/PanelPage.jsx";
+import ConfirmarCostoPage from "./pages/ConfirmarCostoPage.jsx";
 
 function RutaProtegida({ children }) {
   const { user } = useAuth();
-  if (user === undefined) return <div className="cargando">Cargando...</div>;
-  return user ? children : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/" replace />;
+  return children;
 }
 
 export default function App() {
-  const { user } = useAuth();
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/login"
-          element={user ? <Navigate to="/" replace /> : <LoginPage />}
-        />
-        <Route
-          path="/"
-          element={<RutaProtegida><PanelPage /></RutaProtegida>}
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/"                element={<LoginPage />} />
+        <Route path="/panel"           element={<RutaProtegida><PanelPage /></RutaProtegida>} />
+        {/* Ruta pública: confirmación de costo desde email */}
+        <Route path="/confirmar-costo" element={<ConfirmarCostoPage />} />
       </Routes>
     </BrowserRouter>
   );

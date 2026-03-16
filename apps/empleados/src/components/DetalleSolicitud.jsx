@@ -122,6 +122,28 @@ export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVol
         </div>
       )}
 
+      {/* Banner estado confirmación de costo */}
+      {sol.confirmacionCosto && (
+        <div className={`rounded-lg border px-4 py-3 mb-4 text-sm ${
+          sol.confirmacionCosto.estado === "pendiente"
+            ? "bg-blue-50 border-blue-200 text-blue-800"
+            : sol.confirmacionCosto.estado === "aprobado"
+            ? "bg-green-50 border-green-200 text-green-800"
+            : "bg-red-50 border-red-200 text-red-800"
+        }`}>
+          <p className="font-semibold">
+            {sol.confirmacionCosto.estado === "pendiente" && "⏳ Esperando confirmación de costo por parte del asociado"}
+            {sol.confirmacionCosto.estado === "aprobado"  && "✅ Asociado aceptó el costo mensual"}
+            {sol.confirmacionCosto.estado === "rechazado" && "❌ Asociado rechazó el costo mensual — requiere atención"}
+          </p>
+          {sol.confirmacionCosto.itemsConCosto?.map((d, i) => (
+            <p key={i} className="text-xs mt-1 opacity-80">
+              {d.socNom ?? `DNI ${d.adheridoDni}`}: {d.costoMensual}
+            </p>
+          ))}
+        </div>
+      )}
+
       {(!sol.cambios || sol.cambios.length === 0) && (
         <p className="text-gray-400 text-sm mb-4">Sin cambios registrados.</p>
       )}
