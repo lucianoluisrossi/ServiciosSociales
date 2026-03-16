@@ -19,9 +19,9 @@ function formatFecha(val) {
 
 function CampoTabla({ nombre, valor }) {
   return (
-    <tr className="border-t border-gray-100">
-      <td className="py-1.5 pr-4 text-xs text-gray-500 font-medium w-36">{nombre}</td>
-      <td className="py-1.5 text-sm text-gray-800">{valor || "—"}</td>
+    <tr className="border-t border-gray-100 text-sm">
+      <td className="py-1.5 pr-4 text-gray-500 whitespace-nowrap w-20">{nombre}</td>
+      <td className="py-1.5 text-gray-900">{valor ?? "—"}</td>
     </tr>
   );
 }
@@ -52,17 +52,15 @@ function TarjetaCambio({ cambio, dniTitular }) {
             <CampoTabla nombre="DNI"               valor={d.socDocNro} />
             <CampoTabla nombre="Fecha de nac."     valor={formatFecha(d.cliFecNac)} />
             <CampoTabla nombre="Parentesco"        valor={d.pareDsc} />
+            <CampoTabla nombre="Ingreso manual"    valor={d.datosManual ? "Sí" : "No"} />
           </tbody>
         </table>
       )}
-
       {tieneFoto && (
-        <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4">
-          {cambio.fotoFrentePath && (
-            <VisorDNI path={cambio.fotoFrentePath} label="DNI frente" />
-          )}
+        <div className="mt-2">
+          <VisorDNI path={cambio.fotoFrentePath} label="Frente" />
           {cambio.fotoDorsoPath && (
-            <VisorDNI path={cambio.fotoDorsoPath} label="DNI dorso" />
+            <VisorDNI path={cambio.fotoDorsoPath} label="Dorso" />
           )}
         </div>
       )}
@@ -70,14 +68,13 @@ function TarjetaCambio({ cambio, dniTitular }) {
   );
 }
 
-export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResuelta }) {
+export default function DetalleSolicitud({ inicial, onResuelta }) {
   const [sol, setSol] = useState(inicial);
-
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "solicitudes", inicial.id), snap => {
-      if (snap.exists()) setSol({ id: snap.id, ...snap.data() });
+    const unsub = onSnapshot(doc(db, "solicitudes", inicial.id), (snap) => {
+      if (snap.exists) setSol({ id: snap.id, ...snap.data() });
     });
-    return unsub;
+    return () => unsub();
   }, [inicial.id]);
 
   const pendiente = sol.estado === "pendiente";
@@ -88,45 +85,33 @@ export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResue
       <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h2 className="text-lg font-bold text-gray-800">Solicitud — DNI {sol.titularDni}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">Código cliente: {sol.clicod}</p>
-            {sol.celularContacto?.completo ? (
-              <a
-                href={`tel:${sol.celularContacto.completo}`}
-                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 mt-1"
-              >
-                📱 {sol.celularContacto.codArea} {sol.celularContacto.numero}
-              </a>
-            ) : (
-              <p className="text-sm text-gray-400 mt-1">📱 Sin celular de contacto</p>
+            <h2 className="text-lg font-bold text-gray-800">Solicitud #{sol.clicod}</h2>
+            <p className="text-sm text-gray-500">{sol.titularDni} – {sol.titular?.titNom ?? "Sin nombre"}</p>
+            <p className="text-sm text-gray-400 mt-1">Nro cuenta: {sol.titular?.sumNro ?? "—"}</p>
+            <p className="text-sm text-gray-400 mt-1">Cód. cliente: {sol.clicod ?? "—"}</p>
+            {sol.celularContacto && (
+              <div className="mt-2 text-sm text-gray-600 space-y-1">
+                <a href={`tel:+499${sol.celularContacto?.completo}`} className="font-medium text-blue-600 hover:underline">
+                  📞 {sol.celularContacto?.completo ?? "Sin celular"}
+                </a>
+              </div>
+            )}
+            {sol.titular?.titNom && (
+              <p>{sol.titular?.titNom}</p>
             )}
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-1 ${
             sol.estado === "pendiente" ? "bg-yellow-100 text-yellow-800" :
-            sol.estado === "aprobado"  ? "bg-green-100 text-green-800" :
-                                         "bg-red-100 text-red-800"
-          }`}>
-            {sol.estado}
-          </span>
+            sol.estado === "aprobada" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+          }`}>{sol.estado === "pendiente" ? "Pendiente" : sol.estado === "aprobada" ? "Aprobada" : "Rechazada"}</span>
         </div>
-
-        {sol.estado === "rechazado" && sol.motivoRechazo && (
-          <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-4 py-2 text-sm text-red-700">
-            <strong>Motivo de rechazo:</strong> {sol.motivoRechazo}
-          </div>
-        )}
-
-        {sol.tieneIngresosManual && (
-          <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-sm text-amber-700">
-            ⚠️ <strong>Atención:</strong> Uno o más familiares fueron ingresados manualmente (no se pudo leer el código del DNI). Verificar con la foto adjunta.
-          </div>
-        )}
       </div>
 
-      {/* Cambios */}
-      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
-        Cambios solicitados ({sol.cambios?.length ?? 0})
-      </h3>
+      {sol.tieneIngresosManual && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-2.5 mb-4 text-sm text-yellow-800">
+          ⚠️ Uno o más cambios fueron ingresados manualmente. Verificar con atención.
+        </div>
+      )}
 
       {(!sol.cambios || sol.cambios.length === 0) && (
         <p className="text-gray-400 text-sm mb-4">Sin cambios registrados.</p>
@@ -138,12 +123,11 @@ export default function DetalleSolicitud({ solicitud: inicial, onVolver, onResue
         ))}
       </div>
 
-      {/* Acciones */}
       {pendiente ? (
-        <AccionesRevision solicitudId={sol.id} onResuelta={onResuelta} />
+        <AccionesRevision solicitudId={sol.id} solicitud={sol} onResuelta={onResuelta} />
       ) : (
         <p className="text-center text-sm text-gray-400 mt-4">
-          Esta solicitud ya fue resuelta y no puede modificarse.
+          Solicitud ya resuelta.
         </p>
       )}
     </div>
