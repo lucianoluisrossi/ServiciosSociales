@@ -68,14 +68,15 @@ function TarjetaCambio({ cambio, dniTitular }) {
   );
 }
 
-export default function DetalleSolicitud({ inicial, onResuelta }) {
-  const [sol, setSol] = useState(inicial);
+export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVolver }) {
+  const data = solicitud ?? inicial;
+  const [sol, setSol] = useState(data);
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "solicitudes", inicial.id), (snap) => {
+    const unsub = onSnapshot(doc(db, "solicitudes", data.id), (snap) => {
       if (snap.exists) setSol({ id: snap.id, ...snap.data() });
     });
     return () => unsub();
-  }, [inicial.id]);
+  }, [data.id]);
 
   const pendiente = sol.estado === "pendiente";
 
@@ -83,6 +84,14 @@ export default function DetalleSolicitud({ inicial, onResuelta }) {
     <div>
       {/* Encabezado */}
       <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
+        {onVolver && (
+          <button
+            onClick={onVolver}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium mb-3 flex items-center gap-1"
+          >
+            ← Volver
+          </button>
+        )}
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h2 className="text-lg font-bold text-gray-800">Solicitud #{sol.clicod}</h2>
