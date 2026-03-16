@@ -4,7 +4,7 @@ export default function EstadoSolicitud({ solicitud }) {
       bg: "bg-amber-50 border-amber-200",
       icon: "⏳",
       titulo: "Solicitud en revisión",
-      desc: "Sus cambios están siendo revisados por CELTA. Podés seguir agregando o modificando datos mientras tanto.",
+      desc: "Sus cambios están siendo revisados por CELTA.",
       color: "text-amber-800",
     },
     aprobada: {
