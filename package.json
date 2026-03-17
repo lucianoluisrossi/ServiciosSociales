@@ -19,11 +19,11 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.1",
-    "firebase-tools": "^13.0.0",
+    "firebase-tools": "^15.10.1",
     "tailwindcss": "^4.2.1"
   },
   "dependencies": {
     "@zxing/library": "^0.21.3",
-    "firebase-functions": "^7.1.1"
+    "firebase-functions": "^7.2.0"
   }
 }
