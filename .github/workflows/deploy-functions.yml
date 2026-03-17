@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'functions/**'
+  workflow_dispatch:  # permite ejecutarlo manualmente desde GitHub
 
 jobs:
   deploy:
