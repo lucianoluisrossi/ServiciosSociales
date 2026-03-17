@@ -4,8 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/asociado",
-    "apps/empleados",
-    "functions"
+    "apps/empleados"
+    
   ],
   "scripts": {
     "dev:asociado": "npm -w apps/asociado run dev",
