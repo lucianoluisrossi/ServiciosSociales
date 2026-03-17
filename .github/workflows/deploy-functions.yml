@@ -23,7 +23,10 @@ jobs:
         run: npm install
         working-directory: functions
 
+      - name: Setup Google credentials
+        run: echo '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}' > /tmp/gcloud-key.json
+
       - name: Deploy Firebase Functions
-        run: npx firebase-tools deploy --only functions --token "${{ secrets.FIREBASE_TOKEN }}" --project serviciossociales-f15f6 --non-interactive
+        run: npx firebase-tools deploy --only functions --project serviciossociales-f15f6 --non-interactive
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcloud-key.json
