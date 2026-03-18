@@ -1,10 +1,8 @@
 const { initializeApp } = require("firebase-admin/app");
 initializeApp();
 
-const { iniciarSesionAsociado, verificarOTPAsociado } =
-  require("./auth/sesionAsociado");
-const { activarCuenta, confirmarActivacion, buscarAsociadoParaActivar } =
-  require("./auth/activarCuenta");
+const { iniciarSesionAsociado, verificarOTPAsociado } = require("./auth/sesionAsociado");
+const { activarCuenta, confirmarActivacion, buscarAsociadoParaActivar } = require("./auth/activarCuenta");
 const { obtenerDatosAsociado } = require("./asociado/obtenerDatos");
 const { crearCuenta } = require("./asociado/crearCuenta");
 const { resolverSolicitud } = require("./solicitudes/resolverSolicitud");
@@ -13,15 +11,15 @@ const { responderConfirmacionCosto } = require("./solicitudes/responderConfirmac
 const { getSignedUrl } = require("./storage/getSignedUrl");
 const { validarFotoDNI } = require("./storage/validarFotoDNI");
 
-exports.iniciarSesionAsociado = iniciarSesionAsociado.iniciarSesionAsociado;
-exports.verificarOTPAsociado = verificarOTPAsociado.verificarOTPAsociado;
-exports.activarCuenta = activarCuenta.activarCuenta;
-exports.confirmarActivacion = confirmarActivacion.confirmarActivacion;
-exports.buscarAsociadoParaActivar = buscarAsociadoParaActivar.buscarAsociadoParaActivar;
-exports.obtenerDatosAsociado = obtenerDatosAsociado.obtenerDatosAsociado;
-exports.crearCuenta = crearCuenta.crearCuenta;
-exports.resolverSolicitud = resolverSolicitud.resolverSolicitud;
-exports.notificarNuevaSolicitud = notificarNuevaSolicitud.notificarNuevaSolicitud;
-exports.responderConfirmacionCosto = responderConfirmacionCosto.responderConfirmacionCosto;
-exports.getSignedUrl = getSignedUrl.getSignedUrl;
-exports.validarFotoDNI = validarFotoDNI.validarFotoDNI;
+exports.iniciarSesionAsociado = iniciarSesionAsociado;
+exports.verificarOTPAsociado = verificarOTPAsociado;
+exports.activarCuenta = activarCuenta;
+exports.confirmarActivacion = confirmarActivacion;
+exports.buscarAsociadoParaActivar = buscarAsociadoParaActivar;
+exports.obtenerDatosAsociado = obtenerDatosAsociado;
+exports.crearCuenta = crearCuenta;
+exports.resolverSolicitud = resolverSolicitud;
+exports.notificarNuevaSolicitud = notificarNuevaSolicitud;
+exports.responderConfirmacionCosto = responderConfirmacionCosto;
+exports.getSignedUrl = getSignedUrl;
+exports.validarFotoDNI = validarFotoDNI;
