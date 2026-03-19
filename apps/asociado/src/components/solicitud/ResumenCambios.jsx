@@ -9,10 +9,8 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
 
   const validarTelefono = () => {
     const e = {};
-    if (!codArea.trim() || !/^\d{2,4}$/.test(codArea.trim()))
-      e.codArea = "Ingresá el código de área sin el 0 (ej: 11, 351)";
-    if (!celular.trim() || !/^\d{6,8}$/.test(celular.trim()))
-      e.celular = "Ingresá el número sin el 15 (ej: 40123456)";
+    if (!codArea.trim() || !/^\d{2,4}$/.test(codArea.trim())) e.codArea = "Ingresá el código de área sin el 0 (ej: 11, 351)";
+    if (!celular.trim() || !/^\d{6,8}$/.test(celular.trim())) e.celular = "Ingresá el número sin el 15 (ej: 40123456)";
     return e;
   };
 
@@ -22,10 +20,7 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
     if (Object.keys(e).length > 0) { setErrTel(e); return; }
     setErrTel({});
     try {
-      await onEnviar(titular?.cliCod, titular, {
-        codArea: codArea.trim(),
-        celular: celular.trim(),
-      });
+      await onEnviar(titular?.cliCod, titular, { codArea: codArea.trim(), celular: celular.trim() });
       setEnviado(true);
     } catch (err) {
       setError(err.message || "No se pudo enviar la solicitud.");
@@ -38,7 +33,7 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
         <p className="text-2xl mb-2">✅</p>
         <p className="font-semibold text-green-800 text-sm">Solicitud enviada</p>
         <p className="text-xs text-green-600 mt-1">
-          Un empleado de CELTA revisará los cambios y recibirás una notificación al resolver.
+          Un empleado de CELTA revisará los cambios. Recibirás un mail con la aprobación o rechazo de tu solicitud.
         </p>
       </div>
     );
@@ -68,17 +63,13 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
                 {etiquetaTipo(c.tipo)}: {c.datos?.socNom ?? "—"}
               </p>
               <p className="text-xs text-gray-500">
-                DNI {c.adheridoDni}
-                {c.datos?.pareDsc ? ` · ${c.datos.pareDsc}` : ""}
+                DNI {c.adheridoDni} {c.datos?.pareDsc ? ` · ${c.datos.pareDsc}` : ""}
               </p>
               {(c.fotoFrentePath || c.fotoDorsoPath) && (
                 <p className="text-xs text-green-600 mt-0.5">📷 Fotos adjuntas</p>
               )}
             </div>
-            <button
-              onClick={() => onQuitarCambio(i)}
-              className="text-xs text-gray-400 hover:text-red-500 shrink-0"
-            >
+            <button onClick={() => onQuitarCambio(i)} className="text-xs text-gray-400 hover:text-red-500 shrink-0">
               Quitar
             </button>
           </li>
@@ -91,52 +82,34 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
           📱 Dejanos tu celular para poder estar en contacto <span className="text-red-500">*</span>
         </p>
         <div className="flex gap-2 items-start">
-          {/* Código de área */}
           <div className="w-24 shrink-0">
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">0</span>
               <input
-                type="tel"
-                inputMode="numeric"
-                maxLength={4}
-                placeholder="351"
-                value={codArea}
+                type="tel" inputMode="numeric" maxLength={4} placeholder="351" value={codArea}
                 onChange={(e) => { setCodArea(e.target.value.replace(/\D/g, "")); setErrTel((p) => ({ ...p, codArea: null })); }}
-                className={`w-full pl-5 pr-2 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
-                  ${errTel.codArea ? "border-red-400 bg-red-50" : "border-gray-300"}`}
+                className={`w-full pl-5 pr-2 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errTel.codArea ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
             </div>
             <p className="text-xs text-gray-400 mt-0.5 text-center">Cód. área</p>
             {errTel.codArea && <p className="text-xs text-red-500 mt-0.5">{errTel.codArea}</p>}
           </div>
-
           <span className="text-gray-400 mt-2.5 text-sm">–</span>
-
-          {/* Número */}
           <div className="flex-1">
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">15</span>
               <input
-                type="tel"
-                inputMode="numeric"
-                maxLength={8}
-                placeholder="40123456"
-                value={celular}
+                type="tel" inputMode="numeric" maxLength={8} placeholder="40123456" value={celular}
                 onChange={(e) => { setCelular(e.target.value.replace(/\D/g, "")); setErrTel((p) => ({ ...p, celular: null })); }}
-                className={`w-full pl-8 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
-                  ${errTel.celular ? "border-red-400 bg-red-50" : "border-gray-300"}`}
+                className={`w-full pl-8 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errTel.celular ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
             </div>
             <p className="text-xs text-gray-400 mt-0.5">Número sin el 15</p>
             {errTel.celular && <p className="text-xs text-red-500 mt-0.5">{errTel.celular}</p>}
           </div>
         </div>
-
-        {/* Preview del número completo */}
         {codArea && celular && !errTel.codArea && !errTel.celular && (
-          <p className="text-xs text-blue-600">
-            📞 +54 9 {codArea} {celular}
-          </p>
+          <p className="text-xs text-blue-600">📞 +54 9 {codArea} {celular}</p>
         )}
       </div>
 
