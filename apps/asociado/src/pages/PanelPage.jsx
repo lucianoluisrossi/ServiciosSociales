@@ -11,9 +11,16 @@ export default function PanelPage() {
   const auth = getAuth();
   const navigate = useNavigate();
   const { titular, adheridos, loading, error, recargar } = useAdheridos();
-  const { cambios, solicitudActual, tienePendiente, agregarCambio, quitarCambio, enviarSolicitud, enviando } = useSolicitud();
-
-  console.log("titular en PanelPage:", titular);
+  const {
+    cambios,
+    solicitudActual,
+    historialSolicitudes,
+    tienePendiente,
+    agregarCambio,
+    quitarCambio,
+    enviarSolicitud,
+    enviando,
+  } = useSolicitud();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -38,16 +45,18 @@ export default function PanelPage() {
           <div className="text-4xl mb-3">⚠️</div>
           <p className="text-gray-800 font-semibold mb-1">No se pudieron cargar los datos</p>
           <p className="text-gray-500 text-sm mb-5">{error}</p>
-          <button
-            onClick={recargar}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium"
-          >
+          <button onClick={recargar} className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium">
             Reintentar
           </button>
         </div>
       </div>
     );
   }
+
+  // Historial a mostrar: excluir la solicitud actual para no duplicarla
+  const historialPrevio = historialSolicitudes.filter(
+    (s) => s.id !== solicitudActual?.id
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -73,6 +82,7 @@ export default function PanelPage() {
       </header>
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-10">
+        {/* Estado de la solicitud actual */}
         {solicitudActual && (
           <EstadoSolicitud solicitud={solicitudActual} />
         )}
@@ -98,7 +108,19 @@ export default function PanelPage() {
             tienePendiente={tienePendiente}
           />
         )}
+
+        {/* Historial de solicitudes anteriores */}
+        {historialPrevio.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">
+              Solicitudes anteriores
+            </h3>
+            {historialPrevio.map((s) => (
+              <EstadoSolicitud key={s.id} solicitud={s} compacto />
+            ))}
+          </div>
+        )}
       </main>
     </div>
   );
-}
+      }
