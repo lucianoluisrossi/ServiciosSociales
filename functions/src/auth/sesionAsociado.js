@@ -9,6 +9,8 @@ const twilio = require("twilio");
 const TWILIO_ACCOUNT_SID  = defineSecret("TWILIO_ACCOUNT_SID");
 const TWILIO_AUTH_TOKEN   = defineSecret("TWILIO_AUTH_TOKEN");
 const TWILIO_PHONE_NUMBER = defineSecret("TWILIO_PHONE_NUMBER");
+const API_CELTA_TOKEN     = defineSecret("API_CELTA_TOKEN");
+const API_CELTA_URL       = defineSecret("API_CELTA_URL");
 
 const db = getFirestore();
 
@@ -17,7 +19,7 @@ const CORS = [
   "http://localhost:5173",
 ];
 
-const SECRETS = [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER];
+const SECRETS = [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, API_CELTA_TOKEN, API_CELTA_URL];
 
 // ─── helper: normalizar teléfono argentino a E.164 ────────────────────────────
 // Acepta formatos locales: 1155551234, 01155551234, 91155551234, 5491155551234
@@ -64,12 +66,42 @@ exports.iniciarSesionAsociado = onCall(
       throw new HttpsError("invalid-argument", "DNI inválido");
     }
 
-    const snap = await db.collection("cuentas_asociados").doc(String(dni)).get();
-    if (!snap.exists || snap.data().estado !== "activa") {
+    let snap = await db.collection("cuentas_asociados").doc(String(dni)).get();
+
+    // Si no existe en Firestore, verificar en la API de CELTA y crear automáticamente
+    if (!snap.exists) {
+      let titular;
+      try {
+        const res = await fetch(
+          `${API_CELTA_URL.value()}/titular?dni=${dni}`,
+          { headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` } }
+        );
+        if (!res.ok) throw new Error();
+        titular = await res.json();
+      } catch {
+        throw new HttpsError(
+          "not-found",
+          "No encontramos una cuenta para ese DNI. " +
+            "Verificá que el número sea correcto o acercate a nuestras oficinas."
+        );
+      }
+
+      await db.collection("cuentas_asociados").doc(String(dni)).set({
+        estado:           "activa",
+        metodoActivacion: "autoregistro",
+        clicod:           titular.clicod ?? null,
+        canales:          {},
+        creadoEn:         FieldValue.serverTimestamp(),
+      });
+
+      // Recargar el documento recién creado
+      snap = await db.collection("cuentas_asociados").doc(String(dni)).get();
+    }
+
+    if (snap.data().estado !== "activa") {
       throw new HttpsError(
-        "not-found",
-        "No encontramos una cuenta activa para ese DNI. " +
-          "Acercate a nuestras oficinas para activar tu acceso."
+        "failed-precondition",
+        "Tu cuenta no está activa. Acercate a nuestras oficinas."
       );
     }
 
