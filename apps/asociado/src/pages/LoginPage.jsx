@@ -2,13 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../hooks/useAuth";
 
 export default function LoginPage() {
-  const { paso, canalMask, error, loading, iniciarSesion, verificarOTP } = useAuth();
-  const [dni, setDni] = useState("");
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const { paso, canalMask, error, loading, iniciarSesion, registrarTelefono, verificarOTP, reenviarOTP } = useAuth();
+  const [dni, setDni]           = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [otp, setOtp]           = useState(["", "", "", "", "", ""]);
   const [countdown, setCountdown] = useState(0);
   const otpRefs = useRef([]);
-  const dniValido = /^\d{7,8}$/.test(dni);
-  const otpCompleto = otp.join("").length === 6;
+
+  const dniValido      = /^\d{7,8}$/.test(dni);
+  const telefonoValido = /^\d{10}$/.test(telefono.replace(/\D/g, ""));
+  const otpCompleto    = otp.join("").length === 6;
 
   useEffect(() => {
     if (paso === "otp") setCountdown(60);
@@ -38,9 +41,14 @@ export default function LoginPage() {
     e.preventDefault();
   };
 
-  const handleVerificar = () => {
-    if (otpCompleto) verificarOTP(otp.join(""));
+  const handleReenviar = async () => {
+    setOtp(["", "", "", "", "", ""]);
+    setCountdown(60);
+    await reenviarOTP();
   };
+
+  // Indicador de pasos: dni/telefono = paso 1, otp = paso 2
+  const pasoIndicador = paso === "otp" ? 2 : 1;
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-blue-800 to-blue-950 flex flex-col items-center justify-center px-4 py-10">
@@ -64,12 +72,13 @@ export default function LoginPage() {
       {/* Indicador de pasos */}
       <div className="flex items-center gap-2 mb-6">
         <div className="w-8 h-1.5 bg-white rounded-full" />
-        <div className={`w-8 h-1.5 rounded-full transition-colors ${paso === "otp" ? "bg-white" : "bg-white/30"}`} />
+        <div className={`w-8 h-1.5 rounded-full transition-colors ${pasoIndicador === 2 ? "bg-white" : "bg-white/30"}`} />
       </div>
 
       {/* Card */}
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
 
+        {/* ── Paso 1: DNI ── */}
         {paso === "dni" && (
           <div className="p-6 space-y-5 fade-in">
             <div>
@@ -104,6 +113,56 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* ── Paso 1b: Teléfono (solo si no tiene uno registrado) ── */}
+        {paso === "telefono" && (
+          <div className="p-6 space-y-5 fade-in">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Paso 1 de 2</p>
+              <h2 className="text-lg font-bold text-gray-900">Registrá tu celular</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                No tenés un celular registrado. Ingresá tu número para recibir el código de acceso.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700 mb-2">
+                Número de celular
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-mono text-base select-none">
+                  +549
+                </span>
+                <input
+                  id="telefono"
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="1155551234"
+                  value={telefono}
+                  maxLength={10}
+                  onChange={e => setTelefono(e.target.value.replace(/\D/g, ""))}
+                  onKeyDown={e => e.key === "Enter" && telefonoValido && registrarTelefono(telefono)}
+                  className="w-full border-2 border-gray-200 focus:border-blue-500 rounded-xl pl-16 pr-4 py-3.5 text-xl tracking-widest font-mono outline-none transition-colors"
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                10 dígitos sin el 0 ni el 15 (ej: área + número)
+              </p>
+            </div>
+            <button
+              onClick={() => registrarTelefono(telefono)}
+              disabled={!telefonoValido || loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-4 rounded-xl transition-colors text-base"
+            >
+              {loading
+                ? <span className="flex items-center justify-center gap-2"><Spinner />Enviando código...</span>
+                : "Enviar código →"}
+            </button>
+            <button onClick={() => window.location.reload()} className="w-full text-sm text-gray-400 hover:text-gray-600 py-1">
+              ← Cambiar DNI
+            </button>
+          </div>
+        )}
+
+        {/* ── Paso 2: OTP ── */}
         {paso === "otp" && (
           <div className="p-6 space-y-5 fade-in">
             <div>
@@ -111,11 +170,11 @@ export default function LoginPage() {
               <h2 className="text-lg font-bold text-gray-900">Verificá tu identidad</h2>
             </div>
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-start">
-              <span className="text-xl mt-0.5">✉️</span>
+              <span className="text-xl mt-0.5">📱</span>
               <div>
-                <p className="text-sm text-blue-900 font-medium">Código enviado a</p>
+                <p className="text-sm text-blue-900 font-medium">Código enviado por SMS a</p>
                 <p className="text-sm text-blue-700 font-bold">{canalMask}</p>
-                <p className="text-xs text-blue-500 mt-0.5">Revisá también tu carpeta de spam</p>
+                <p className="text-xs text-blue-500 mt-0.5">Puede demorar unos segundos</p>
               </div>
             </div>
 
@@ -141,7 +200,7 @@ export default function LoginPage() {
             </div>
 
             <button
-              onClick={handleVerificar}
+              onClick={() => otpCompleto && verificarOTP(otp.join(""))}
               disabled={!otpCompleto || loading}
               className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-4 rounded-xl transition-colors text-base"
             >
@@ -156,8 +215,7 @@ export default function LoginPage() {
               </button>
               {countdown > 0
                 ? <span className="text-gray-400">Reenviar en {countdown}s</span>
-                : <button onClick={() => { iniciarSesion(dni); setCountdown(60); setOtp(["","","","","",""]); }}
-                    className="text-blue-600 hover:underline font-medium">
+                : <button onClick={handleReenviar} className="text-blue-600 hover:underline font-medium">
                     Reenviar código
                   </button>
               }

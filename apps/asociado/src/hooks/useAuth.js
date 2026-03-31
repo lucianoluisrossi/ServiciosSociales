@@ -3,16 +3,18 @@ import { onAuthStateChanged, signInWithCustomToken, signOut } from "firebase/aut
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "../services/firebase";
 
-const iniciarSesionFn = httpsCallable(functions, "iniciarSesionAsociado");
-const verificarOTPFn  = httpsCallable(functions, "verificarOTPAsociado");
+const iniciarSesionFn         = httpsCallable(functions, "iniciarSesionAsociado");
+const registrarTelefonoFn     = httpsCallable(functions, "registrarTelefonoYEnviarOTP");
+const verificarOTPFn          = httpsCallable(functions, "verificarOTPAsociado");
 
 export function useAuth() {
-  const [user, setUser]           = useState(undefined);
-  const [paso, setPaso]           = useState("dni");
-  const [canalMask, setCanalMask] = useState("");
-  const [dniTemp, setDniTemp]     = useState("");
-  const [error, setError]         = useState(null);
-  const [loading, setLoading]     = useState(false);
+  const [user, setUser]               = useState(undefined);
+  const [paso, setPaso]               = useState("dni");
+  const [canalMask, setCanalMask]     = useState("");
+  const [dniTemp, setDniTemp]         = useState("");
+  const [telefonoTemp, setTelefonoTemp] = useState("");
+  const [error, setError]             = useState(null);
+  const [loading, setLoading]         = useState(false);
 
   useEffect(() => {
     return onAuthStateChanged(auth, u => {
@@ -26,10 +28,26 @@ export function useAuth() {
     try {
       const { data } = await iniciarSesionFn({ dni });
       setDniTemp(dni);
+      if (data.necesitaTelefono) {
+        setPaso("telefono");
+      } else {
+        setCanalMask(data.canalMask);
+        setPaso("otp");
+      }
+    } catch (e) {
+      setError(e.message ?? "Error al verificar el DNI. Intentá de nuevo.");
+    } finally { setLoading(false); }
+  };
+
+  const registrarTelefono = async (telefono) => {
+    setLoading(true); setError(null);
+    try {
+      const { data } = await registrarTelefonoFn({ dni: dniTemp, telefono });
+      setTelefonoTemp(telefono);
       setCanalMask(data.canalMask);
       setPaso("otp");
     } catch (e) {
-      setError(e.message ?? "Error al verificar el DNI. IntentÃ¡ de nuevo.");
+      setError(e.message ?? "Error al registrar el teléfono. Intentá de nuevo.");
     } finally { setLoading(false); }
   };
 
@@ -39,14 +57,27 @@ export function useAuth() {
       const { data } = await verificarOTPFn({ dni: dniTemp, otp });
       await signInWithCustomToken(auth, data.customToken);
     } catch (e) {
-      setError(e.message ?? "CÃ³digo incorrecto. VerificÃ¡ e intentÃ¡ de nuevo.");
+      setError(e.message ?? "Código incorrecto. Verificá e intentá de nuevo.");
     } finally { setLoading(false); }
+  };
+
+  // Reenvía el OTP usando el canal correcto según el paso anterior
+  const reenviarOTP = async () => {
+    if (telefonoTemp) {
+      await registrarTelefono(telefonoTemp);
+    } else {
+      await iniciarSesion(dniTemp);
+    }
   };
 
   const cerrarSesion = async () => {
     await signOut(auth);
-    setPaso("dni"); setDniTemp(""); setCanalMask(""); setError(null);
+    setPaso("dni");
+    setDniTemp(""); setTelefonoTemp(""); setCanalMask(""); setError(null);
   };
 
-  return { user, paso, canalMask, error, loading, iniciarSesion, verificarOTP, cerrarSesion };
+  return {
+    user, paso, canalMask, error, loading,
+    iniciarSesion, registrarTelefono, verificarOTP, reenviarOTP, cerrarSesion,
+  };
 }

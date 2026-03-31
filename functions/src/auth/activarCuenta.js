@@ -2,11 +2,13 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret }       = require("firebase-functions/params");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("crypto");
-const { Resend } = require("resend");
+const twilio = require("twilio");
 
-const RESEND_API_KEY  = defineSecret("RESEND_API_KEY");
-const API_CELTA_TOKEN = defineSecret("API_CELTA_TOKEN");
-const API_CELTA_URL   = defineSecret("API_CELTA_URL");
+// Todos los defineSecret deben estar al nivel superior del módulo
+const TWILIO_ACCOUNT_SID = defineSecret("TWILIO_ACCOUNT_SID");
+const TWILIO_AUTH_TOKEN  = defineSecret("TWILIO_AUTH_TOKEN");
+const API_CELTA_TOKEN    = defineSecret("API_CELTA_TOKEN");
+const API_CELTA_URL      = defineSecret("API_CELTA_URL");
 
 const db = getFirestore();
 
@@ -15,39 +17,36 @@ const CORS = [
   "http://localhost:5174",
 ];
 
-const SECRETS = [RESEND_API_KEY, API_CELTA_TOKEN, API_CELTA_URL];
+const SECRETS = [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, API_CELTA_TOKEN, API_CELTA_URL];
 
-// ─── helpers ────────────────────────────────────────────────────
+// ─── helpers ────────────────────────────────────────────────────────────────
 
-function enmascararCanal(valor) {
-  return valor.replace(/(.{2}).+(@.+)/, "$1***$2");
+function normalizarTelefono(raw) {
+  const digits = raw.replace(/\D/g, "");
+  if (/^\d{10}$/.test(digits))          return "+549" + digits;
+  if (/^0\d{10}$/.test(digits))         return "+549" + digits.slice(1);
+  if (/^9\d{10}$/.test(digits))         return "+54"  + digits;
+  if (/^549\d{10}$/.test(digits))       return "+"    + digits;
+  if (/^54\d{10}$/.test(digits))        return "+549" + digits.slice(2);
+  return null;
 }
 
-async function enviarOTP(email, otp, apellido) {
-  const resend = new Resend(RESEND_API_KEY.value());
-  await resend.emails.send({
-    from: "CELTA Sepelios <noreply@celta.com.ar>",
-    to: email,
-    subject: "Código de activación — CELTA Sepelios",
-    html: `
-      <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:2rem">
-        <h2 style="color:#1e40af">CELTA Sepelios</h2>
-        <p>Estimado/a <strong>${apellido}</strong>,</p>
-        <p>Su código de activación es:</p>
-        <div style="font-size:2rem;font-weight:700;letter-spacing:8px;color:#1e40af;padding:1rem;background:#eff6ff;border-radius:8px;text-align:center">
-          ${otp}
-        </div>
-        <p style="color:#6b7280;font-size:.85rem;margin-top:1rem">
-          Válido por 15 minutos. No lo comparta con nadie.
-        </p>
-      </div>
-    `,
+function maskTelefono(telefono) {
+  return telefono.slice(0, 4) + " ****" + telefono.slice(-4);
+}
+
+async function enviarOTPSMS(telefono, otp, apellido) {
+  const client = twilio(TWILIO_ACCOUNT_SID.value(), TWILIO_AUTH_TOKEN.value());
+  await client.messages.create({
+    body: `Estimado/a ${apellido}, su código de activación CELTA Sepelios es: ${otp}. Válido por 15 minutos.`,
+    from: "CELTA",
+    to: telefono,
   });
 }
 
-// ─── Buscar asociado para activar ───────────────────────────────
+// ─── Buscar asociado para activar ────────────────────────────────────────────
 exports.buscarAsociadoParaActivar = onCall(
-  { region: "us-east1", cors: CORS, secrets: SECRETS },
+  { region: "us-east1", cors: CORS, secrets: [API_CELTA_TOKEN, API_CELTA_URL] },
   async ({ auth: reqAuth, data }) => {
     if (!reqAuth || !["empleado", "supervisor"].includes(reqAuth.token.rol)) {
       throw new HttpsError("permission-denied", "No autorizado");
@@ -72,21 +71,17 @@ exports.buscarAsociadoParaActivar = onCall(
 
     const snap = await db.collection("cuentas_asociados").doc(String(dni)).get();
     const estadoCuenta = snap.exists ? snap.data().estado : "no_activada";
-    const canales = snap.exists ? snap.data().canales : null;
+    const canales      = snap.exists ? snap.data().canales : null;
 
     return {
-      titular: {
-        clicod: titular.clicod,
-        sumnro: titular.sumnro,
-        cliape: titular.cliape,
-      },
+      titular: { clicod: titular.clicod, sumnro: titular.sumnro, cliape: titular.cliape },
       estadoCuenta,
       canales,
     };
   }
 );
 
-// ─── Activar cuenta ──────────────────────────────────────────────
+// ─── Activar cuenta ──────────────────────────────────────────────────────────
 exports.activarCuenta = onCall(
   { region: "us-east1", cors: CORS, secrets: SECRETS },
   async ({ auth: reqAuth, data }) => {
@@ -94,13 +89,14 @@ exports.activarCuenta = onCall(
       throw new HttpsError("permission-denied", "No autorizado");
     }
 
-    const { dni, email, metodo } = data;
+    const { dni, telefono, metodo } = data;
 
     if (!dni || !/^\d{7,8}$/.test(String(dni))) {
       throw new HttpsError("invalid-argument", "DNI inválido");
     }
-    if (!email) {
-      throw new HttpsError("invalid-argument", "Se requiere un email para activar la cuenta");
+    const telefonoNorm = normalizarTelefono(String(telefono ?? ""));
+    if (!telefonoNorm) {
+      throw new HttpsError("invalid-argument", "Número de celular inválido");
     }
     if (!["presencial", "telefonica", "campania"].includes(metodo)) {
       throw new HttpsError("invalid-argument", "Método de activación inválido");
@@ -119,7 +115,7 @@ exports.activarCuenta = onCall(
     }
 
     const cuentaRef = db.collection("cuentas_asociados").doc(String(dni));
-    const snap = await cuentaRef.get();
+    const snap      = await cuentaRef.get();
     if (snap.exists && snap.data().estado === "activa") {
       throw new HttpsError("already-exists", "Este asociado ya tiene cuenta activa");
     }
@@ -128,37 +124,37 @@ exports.activarCuenta = onCall(
     const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
 
     await cuentaRef.set({
-      estado: "pendiente_confirmacion",
+      estado:           "pendiente_confirmacion",
       metodoActivacion: metodo,
-      activadoPor: reqAuth.uid,
-      creadoEn: FieldValue.serverTimestamp(),
+      activadoPor:      reqAuth.uid,
+      creadoEn:         FieldValue.serverTimestamp(),
       canales: {
-        email: { valor: email, verificado: false },
+        telefono: { valor: telefonoNorm, verificado: false },
       },
       otpActivacion: { hash: otpHash, expira: Date.now() + 15 * 60 * 1000, intentos: 0 },
     });
 
     await db.collection("auditoria").add({
-      tipo: "activacion_iniciada",
-      dni: String(dni),
-      clicod: titular.clicod,
+      tipo:        "activacion_iniciada",
+      dni:         String(dni),
+      clicod:      titular.clicod,
       empleadoUid: reqAuth.uid,
       metodo,
-      timestamp: FieldValue.serverTimestamp(),
-      detalle: `Activación iniciada vía ${metodo}`,
+      timestamp:   FieldValue.serverTimestamp(),
+      detalle:     `Activación iniciada vía ${metodo}`,
     });
 
-    await enviarOTP(email, otp, titular.cliape);
+    await enviarOTPSMS(telefonoNorm, otp, titular.cliape);
 
     return {
-      ok: true,
-      canalMask: enmascararCanal(email),
-      titular: { cliape: titular.cliape, clicod: titular.clicod },
+      ok:        true,
+      canalMask: maskTelefono(telefonoNorm),
+      titular:   { cliape: titular.cliape, clicod: titular.clicod },
     };
   }
 );
 
-// ─── Confirmar activación ────────────────────────────────────────
+// ─── Confirmar activación ─────────────────────────────────────────────────────
 exports.confirmarActivacion = onCall(
   { region: "us-east1", cors: CORS, secrets: SECRETS },
   async ({ auth: reqAuth, data }) => {
@@ -167,8 +163,8 @@ exports.confirmarActivacion = onCall(
     }
 
     const { dni, otp } = data;
-    const cuentaRef = db.collection("cuentas_asociados").doc(String(dni));
-    const snap = await cuentaRef.get();
+    const cuentaRef    = db.collection("cuentas_asociados").doc(String(dni));
+    const snap         = await cuentaRef.get();
 
     if (!snap.exists) throw new HttpsError("not-found", "Cuenta no encontrada");
 
@@ -200,18 +196,18 @@ exports.confirmarActivacion = onCall(
     }
 
     await cuentaRef.update({
-      estado: "activa",
-      activadoEn: FieldValue.serverTimestamp(),
+      estado:        "activa",
+      activadoEn:    FieldValue.serverTimestamp(),
       otpActivacion: FieldValue.delete(),
       ...canalesVerificados,
     });
 
     await db.collection("auditoria").add({
-      tipo: "activacion_completada",
-      dni: String(dni),
+      tipo:        "activacion_completada",
+      dni:         String(dni),
       empleadoUid: reqAuth.uid,
-      timestamp: FieldValue.serverTimestamp(),
-      detalle: "Cuenta activada exitosamente",
+      timestamp:   FieldValue.serverTimestamp(),
+      detalle:     "Cuenta activada exitosamente",
     });
 
     return { ok: true };

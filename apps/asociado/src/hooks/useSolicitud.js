@@ -1,22 +1,32 @@
 import { useState, useEffect, useCallback } from "react";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../services/firebase";
+
+const registrarEmailFn = httpsCallable(functions, "registrarEmailAsociado");
 
 export function useSolicitud() {
-  const [cambios, setCambios] = useState([]);
+  const [cambios, setCambios]                 = useState([]);
   const [solicitudActual, setSolicitudActual] = useState(null);
-  const [enviando, setEnviando] = useState(false);
+  const [enviando, setEnviando]               = useState(false);
+  const [emailRegistrado, setEmailRegistrado] = useState(undefined); // undefined=cargando, null=sin email, string=tiene email
   const auth = getAuth();
-  const db = getFirestore();
+  const db   = getFirestore();
 
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
 
-    user.getIdTokenResult().then((tokenResult) => {
+    user.getIdTokenResult().then(async (tokenResult) => {
       const dniAsociado = tokenResult.claims.dni;
       if (!dniAsociado) return;
 
+      // Leer email registrado en la cuenta
+      const cuentaSnap = await getDoc(doc(db, "cuentas_asociados", String(dniAsociado)));
+      setEmailRegistrado(cuentaSnap.data()?.canales?.email?.valor ?? null);
+
+      // Escuchar solicitudes
       const q = query(
         collection(db, "solicitudes"),
         where("titularDni", "==", dniAsociado),
@@ -27,11 +37,11 @@ export function useSolicitud() {
 
       const unsub = onSnapshot(q, (snap) => {
         if (!snap.empty) {
-          const doc = snap.docs[0];
-          const data = { id: doc.id, ...doc.data() };
-          const ahora = Date.now();
+          const docSnap = snap.docs[0];
+          const data    = { id: docSnap.id, ...docSnap.data() };
+          const ahora   = Date.now();
           const creadoEn = data.creadoEn?.toMillis?.() ?? 0;
-          const horas48 = 48 * 60 * 60 * 1000;
+          const horas48  = 48 * 60 * 60 * 1000;
           if (data.estado === "pendiente" || (ahora - creadoEn < horas48)) {
             setSolicitudActual(data);
           } else {
@@ -59,7 +69,7 @@ export function useSolicitud() {
     setCambios((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const enviarSolicitud = useCallback(async (clicod, datosTitular, contacto) => {
+  const enviarSolicitud = useCallback(async (clicod, datosTitular, contacto, email) => {
     if (cambios.length === 0) return;
     if (solicitudActual?.estado === "pendiente") {
       throw new Error("Ya tenés una solicitud pendiente de revisión. Esperá a que sea resuelta.");
@@ -67,29 +77,34 @@ export function useSolicitud() {
     setEnviando(true);
 
     try {
-      const user = auth.currentUser;
+      // Si no tiene email registrado y el asociado proporcionó uno, guardarlo antes de enviar
+      if (!emailRegistrado && email) {
+        await registrarEmailFn({ email });
+        setEmailRegistrado(email);
+      }
+
+      const user        = auth.currentUser;
       const tokenResult = await user.getIdTokenResult();
       const dniAsociado = tokenResult.claims.dni;
+
       await addDoc(collection(db, "solicitudes"), {
         titularDni: dniAsociado,
         clicod: clicod ?? null,
         titular: {
-          titNom: datosTitular?.titNom ?? null,
-          sumNro: datosTitular?.sumNro ?? null,
+          titNom:    datosTitular?.titNom    ?? null,
+          sumNro:    datosTitular?.sumNro    ?? null,
           socDocNro: datosTitular?.socDocNro ?? null,
         },
         celularContacto: {
           codArea: contacto?.codArea ?? null,
-          numero: contacto?.celular ?? null,
-          // Número completo en formato Argentina para facilitar el uso desde el panel
+          numero:  contacto?.celular ?? null,
           completo: contacto ? `+549${contacto.codArea}${contacto.celular}` : null,
         },
         cambios,
-        // Flag para el empleado: indica si algún cambio fue ingresado manualmente
         tieneIngresosManual: cambios.some((c) => c.datos?.datosManual === true),
-        estado: "pendiente",
-        creadoEn: serverTimestamp(),
-        revisadoPor: null,
+        estado:       "pendiente",
+        creadoEn:     serverTimestamp(),
+        revisadoPor:  null,
         motivoRechazo: null,
       });
       setCambios([]);
@@ -98,9 +113,9 @@ export function useSolicitud() {
     } finally {
       setEnviando(false);
     }
-  }, [cambios, solicitudActual, auth, db]);
+  }, [cambios, solicitudActual, emailRegistrado, auth, db]);
 
   const tienePendiente = solicitudActual?.estado === "pendiente";
 
-  return { cambios, solicitudActual, tienePendiente, agregarCambio, quitarCambio, enviarSolicitud, enviando };
+  return { cambios, solicitudActual, tienePendiente, agregarCambio, quitarCambio, enviarSolicitud, enviando, emailRegistrado };
 }

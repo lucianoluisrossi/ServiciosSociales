@@ -20,6 +20,7 @@ export default function PanelPage() {
     quitarCambio,
     enviarSolicitud,
     enviando,
+    emailRegistrado,
   } = useSolicitud();
 
   const handleLogout = async () => {
@@ -96,6 +97,7 @@ export default function PanelPage() {
             onEnviar={enviarSolicitud}
             enviando={enviando}
             tienePendiente={tienePendiente}
+            emailRegistrado={emailRegistrado}
           />
         )}
 

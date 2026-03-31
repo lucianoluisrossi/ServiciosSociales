@@ -1,26 +1,35 @@
 import { useState } from "react";
 
-export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCambio, onEnviar, enviando, tienePendiente }) {
-  const [error, setError] = useState(null);
+export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCambio, onEnviar, enviando, tienePendiente, emailRegistrado }) {
+  const [error, setError]   = useState(null);
   const [enviado, setEnviado] = useState(false);
   const [codArea, setCodArea] = useState("");
   const [celular, setCelular] = useState("");
-  const [errTel, setErrTel] = useState({});
+  const [email, setEmail]     = useState("");
+  const [errores, setErrores] = useState({});
 
-  const validarTelefono = () => {
+  const necesitaEmail = emailRegistrado === null;
+
+  const validarCampos = () => {
     const e = {};
-    if (!codArea.trim() || !/^\d{2,4}$/.test(codArea.trim())) e.codArea = "Ingresá el código de área sin el 0 (ej: 11, 351)";
-    if (!celular.trim() || !/^\d{6,8}$/.test(celular.trim())) e.celular = "Ingresá el número sin el 15 (ej: 40123456)";
+    if (!codArea.trim() || !/^\d{2,4}$/.test(codArea.trim()))   e.codArea = "Ingresá el código de área sin el 0 (ej: 11, 351)";
+    if (!celular.trim() || !/^\d{6,8}$/.test(celular.trim()))   e.celular = "Ingresá el número sin el 15 (ej: 40123456)";
+    if (necesitaEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Ingresá un email válido";
     return e;
   };
 
   const handleEnviar = async () => {
     setError(null);
-    const e = validarTelefono();
-    if (Object.keys(e).length > 0) { setErrTel(e); return; }
-    setErrTel({});
+    const e = validarCampos();
+    if (Object.keys(e).length > 0) { setErrores(e); return; }
+    setErrores({});
     try {
-      await onEnviar(titular?.cliCod, titular, { codArea: codArea.trim(), celular: celular.trim() });
+      await onEnviar(
+        titular?.cliCod,
+        titular,
+        { codArea: codArea.trim(), celular: celular.trim() },
+        necesitaEmail ? email.trim() : null
+      );
       setEnviado(true);
     } catch (err) {
       setError(err.message || "No se pudo enviar la solicitud.");
@@ -87,12 +96,12 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">0</span>
               <input
                 type="tel" inputMode="numeric" maxLength={4} placeholder="351" value={codArea}
-                onChange={(e) => { setCodArea(e.target.value.replace(/\D/g, "")); setErrTel((p) => ({ ...p, codArea: null })); }}
-                className={`w-full pl-5 pr-2 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errTel.codArea ? "border-red-400 bg-red-50" : "border-gray-300"}`}
+                onChange={(e) => { setCodArea(e.target.value.replace(/\D/g, "")); setErrores((p) => ({ ...p, codArea: null })); }}
+                className={`w-full pl-5 pr-2 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errores.codArea ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
             </div>
             <p className="text-xs text-gray-400 mt-0.5 text-center">Cód. área</p>
-            {errTel.codArea && <p className="text-xs text-red-500 mt-0.5">{errTel.codArea}</p>}
+            {errores.codArea && <p className="text-xs text-red-500 mt-0.5">{errores.codArea}</p>}
           </div>
           <span className="text-gray-400 mt-2.5 text-sm">–</span>
           <div className="flex-1">
@@ -100,18 +109,37 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">15</span>
               <input
                 type="tel" inputMode="numeric" maxLength={8} placeholder="40123456" value={celular}
-                onChange={(e) => { setCelular(e.target.value.replace(/\D/g, "")); setErrTel((p) => ({ ...p, celular: null })); }}
-                className={`w-full pl-8 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errTel.celular ? "border-red-400 bg-red-50" : "border-gray-300"}`}
+                onChange={(e) => { setCelular(e.target.value.replace(/\D/g, "")); setErrores((p) => ({ ...p, celular: null })); }}
+                className={`w-full pl-8 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errores.celular ? "border-red-400 bg-red-50" : "border-gray-300"}`}
               />
             </div>
             <p className="text-xs text-gray-400 mt-0.5">Número sin el 15</p>
-            {errTel.celular && <p className="text-xs text-red-500 mt-0.5">{errTel.celular}</p>}
+            {errores.celular && <p className="text-xs text-red-500 mt-0.5">{errores.celular}</p>}
           </div>
         </div>
-        {codArea && celular && !errTel.codArea && !errTel.celular && (
+        {codArea && celular && !errores.codArea && !errores.celular && (
           <p className="text-xs text-blue-600">📞 +54 9 {codArea} {celular}</p>
         )}
       </div>
+
+      {/* Email — solo si no está registrado */}
+      {necesitaEmail && (
+        <div className="px-4 py-3 border-t border-gray-100 space-y-1">
+          <p className="text-xs font-medium text-gray-600">
+            ✉️ Email para recibir el resultado de tu solicitud <span className="text-red-500">*</span>
+          </p>
+          <input
+            type="email"
+            inputMode="email"
+            placeholder="tucorreo@ejemplo.com"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); setErrores((p) => ({ ...p, email: null })); }}
+            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errores.email ? "border-red-400 bg-red-50" : "border-gray-300"}`}
+          />
+          {errores.email && <p className="text-xs text-red-500">{errores.email}</p>}
+          <p className="text-xs text-gray-400">Lo usaremos solo para avisarte cuando tu solicitud sea revisada.</p>
+        </div>
+      )}
 
       {/* Error general */}
       {error && (
@@ -124,7 +152,7 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
       <div className="px-4 py-3 border-t border-gray-100">
         <button
           onClick={handleEnviar}
-          disabled={enviando || tienePendiente}
+          disabled={enviando || tienePendiente || emailRegistrado === undefined}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
         >
           {enviando ? "Enviando..." : tienePendiente ? "Solicitud pendiente de revisión" : "Enviar solicitud de cambios"}
