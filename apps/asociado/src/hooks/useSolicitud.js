@@ -10,7 +10,8 @@ export function useSolicitud() {
   const [cambios, setCambios]                 = useState([]);
   const [solicitudActual, setSolicitudActual] = useState(null);
   const [enviando, setEnviando]               = useState(false);
-  const [emailRegistrado, setEmailRegistrado] = useState(undefined); // undefined=cargando, null=sin email, string=tiene email
+  const [emailRegistrado, setEmailRegistrado]       = useState(undefined); // undefined=cargando, null=sin email, string=tiene email
+  const [telefonoRegistrado, setTelefonoRegistrado] = useState(null);
   const auth = getAuth();
   const db   = getFirestore();
 
@@ -22,9 +23,11 @@ export function useSolicitud() {
       const dniAsociado = tokenResult.claims.dni;
       if (!dniAsociado) return;
 
-      // Leer email registrado en la cuenta
+      // Leer canales registrados en la cuenta
       const cuentaSnap = await getDoc(doc(db, "cuentas_asociados", String(dniAsociado)));
-      setEmailRegistrado(cuentaSnap.data()?.canales?.email?.valor ?? null);
+      const canales = cuentaSnap.data()?.canales ?? {};
+      setEmailRegistrado(canales.email?.valor ?? null);
+      setTelefonoRegistrado(canales.telefono?.valor ?? null);
 
       // Escuchar solicitudes
       const q = query(
@@ -69,7 +72,7 @@ export function useSolicitud() {
     setCambios((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const enviarSolicitud = useCallback(async (clicod, datosTitular, contacto, email) => {
+  const enviarSolicitud = useCallback(async (clicod, datosTitular, email) => {
     if (cambios.length === 0) return;
     if (solicitudActual?.estado === "pendiente") {
       throw new Error("Ya tenés una solicitud pendiente de revisión. Esperá a que sea resuelta.");
@@ -95,11 +98,7 @@ export function useSolicitud() {
           sumNro:    datosTitular?.sumNro    ?? null,
           socDocNro: datosTitular?.socDocNro ?? null,
         },
-        celularContacto: {
-          codArea: contacto?.codArea ?? null,
-          numero:  contacto?.celular ?? null,
-          completo: contacto ? `+549${contacto.codArea}${contacto.celular}` : null,
-        },
+        telefonoTitular: telefonoRegistrado ?? null,
         cambios,
         tieneIngresosManual: cambios.some((c) => c.datos?.datosManual === true),
         estado:       "pendiente",
@@ -113,7 +112,7 @@ export function useSolicitud() {
     } finally {
       setEnviando(false);
     }
-  }, [cambios, solicitudActual, emailRegistrado, auth, db]);
+  }, [cambios, solicitudActual, emailRegistrado, telefonoRegistrado, auth, db]);
 
   const tienePendiente = solicitudActual?.estado === "pendiente";
 

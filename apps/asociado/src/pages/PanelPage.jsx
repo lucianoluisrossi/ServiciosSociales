@@ -94,7 +94,7 @@ export default function PanelPage() {
             adheridos={adheridos}
             titular={titular}
             onQuitarCambio={quitarCambio}
-            onEnviar={enviarSolicitud}
+            onEnviar={(clicod, datosTitular, email) => enviarSolicitud(clicod, datosTitular, email)}
             enviando={enviando}
             tienePendiente={tienePendiente}
             emailRegistrado={emailRegistrado}

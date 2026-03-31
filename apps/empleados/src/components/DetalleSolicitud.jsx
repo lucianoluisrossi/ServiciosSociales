@@ -98,15 +98,21 @@ export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVol
             <p className="text-sm text-gray-500">{sol.titularDni} – {sol.titular?.titNom ?? "Sin nombre"}</p>
             <p className="text-sm text-gray-400 mt-1">Nro cuenta: {sol.titular?.sumNro ?? "—"}</p>
             <p className="text-sm text-gray-400 mt-1">Cód. cliente: {sol.clicod ?? "—"}</p>
-            {sol.celularContacto && (
-              <div className="mt-2 text-sm text-gray-600 space-y-1">
-                <a href={`tel:+499${sol.celularContacto?.completo}`} className="font-medium text-blue-600 hover:underline">
-                  📞 {sol.celularContacto?.completo ?? "Sin celular"}
+            {sol.telefonoTitular && (
+              <p className="text-sm mt-2">
+                📱 <span className="text-gray-500">Celular (SMS):</span>{" "}
+                <a href={`tel:${sol.telefonoTitular}`} className="font-medium text-blue-600 hover:underline">
+                  {sol.telefonoTitular}
                 </a>
-              </div>
+              </p>
             )}
-            {sol.titular?.titNom && (
-              <p>{sol.titular?.titNom}</p>
+            {sol.celularContacto?.completo && (
+              <p className="text-sm mt-1">
+                📞 <span className="text-gray-500">Celular de contacto:</span>{" "}
+                <a href={`tel:${sol.celularContacto.completo}`} className="font-medium text-blue-600 hover:underline">
+                  {sol.celularContacto.completo}
+                </a>
+              </p>
             )}
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-1 ${
