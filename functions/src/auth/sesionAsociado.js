@@ -74,7 +74,7 @@ exports.iniciarSesionAsociado = onCall(
       try {
         const res = await fetch(
           `${API_CELTA_URL.value()}${dni}`,
-          { headers: { Authorization: `Bearer ${API_CELTA_TOKEN.value()}` } }
+          { headers: { "X-Api-Key": API_CELTA_TOKEN.value() } }
         );
         if (!res.ok) throw new Error();
         titular = await res.json();
