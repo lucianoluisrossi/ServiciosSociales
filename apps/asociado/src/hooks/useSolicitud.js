@@ -99,6 +99,7 @@ export function useSolicitud() {
           socDocNro: datosTitular?.socDocNro ?? null,
         },
         telefonoTitular: telefonoRegistrado ?? null,
+        emailTitular: emailRegistrado || email || null,
         cambios,
         tieneIngresosManual: cambios.some((c) => c.datos?.datosManual === true),
         estado:       "pendiente",

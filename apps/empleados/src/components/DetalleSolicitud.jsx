@@ -26,7 +26,7 @@ function CampoTabla({ nombre, valor }) {
   );
 }
 
-function TarjetaCambio({ cambio, dniTitular }) {
+function TarjetaCambio({ cambio }) {
   const meta = TIPO_META[cambio.tipo] ?? { label: cambio.tipo, color: "bg-gray-100 text-gray-700", icon: "•" };
   const d = cambio.datos ?? {};
   const tieneFoto = !!(cambio.fotoFrentePath || cambio.fotoDorsoPath);
@@ -98,6 +98,14 @@ export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVol
             <p className="text-sm text-gray-500">{sol.titularDni} – {sol.titular?.titNom ?? "Sin nombre"}</p>
             <p className="text-sm text-gray-400 mt-1">Nro cuenta: {sol.titular?.sumNro ?? "—"}</p>
             <p className="text-sm text-gray-400 mt-1">Cód. cliente: {sol.clicod ?? "—"}</p>
+            {sol.emailTitular && (
+              <p className="text-sm mt-2">
+                ✉️ <span className="text-gray-500">Email:</span>{" "}
+                <a href={`mailto:${sol.emailTitular}`} className="font-medium text-blue-600 hover:underline">
+                  {sol.emailTitular}
+                </a>
+              </p>
+            )}
             {sol.telefonoTitular && (
               <p className="text-sm mt-2">
                 📱 <span className="text-gray-500">Celular (SMS):</span>{" "}
