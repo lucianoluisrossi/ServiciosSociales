@@ -23,7 +23,15 @@ export default function LoginPage() {
   }, [countdown]);
 
   const handleOtpChange = (i, val) => {
-    const v = val.replace(/\D/g, "").slice(-1);
+    const digits = val.replace(/\D/g, "");
+    if (digits.length > 1) {
+      const next = digits.slice(0, 6).split("");
+      while (next.length < 6) next.push("");
+      setOtp(next);
+      otpRefs.current[Math.min(digits.length - 1, 5)]?.focus();
+      return;
+    }
+    const v = digits.slice(-1);
     const next = [...otp];
     next[i] = v;
     setOtp(next);
