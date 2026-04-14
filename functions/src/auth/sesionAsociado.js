@@ -44,7 +44,7 @@ function maskTelefono(telefono) {
 async function enviarOTPSMS(telefono, otp) {
   const client = twilio(TWILIO_ACCOUNT_SID.value(), TWILIO_AUTH_TOKEN.value());
   await client.messages.create({
-    body: `Tu código de acceso CELTA Sepelios: ${otp}. Válido por 10 minutos. No lo compartas.`,
+    body: `Tu código de acceso CELTA Sepelios: ${otp}. Válido por 10 minutos. No lo compartas.\n@celta-sepelios.vercel.app #${otp}`,
     from: TWILIO_PHONE_NUMBER.value(),
     to: telefono,
   });
