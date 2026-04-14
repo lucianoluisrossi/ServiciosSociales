@@ -30,7 +30,8 @@ function Dato({ label, value, fullWidth }) {
 
 function formatFecha(str) {
   if (!str) return "—";
-  const d = new Date(str);
-  if (isNaN(d)) return str;
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const iso = typeof str === "string" && str.includes("T") ? str.slice(0, 10) : String(str);
+  const parts = iso.split("-");
+  if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return str;
 }
