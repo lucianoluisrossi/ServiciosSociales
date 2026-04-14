@@ -12,9 +12,10 @@ const TIPO_META = {
 
 function formatFecha(val) {
   if (!val) return "—";
-  const d = new Date(val);
-  if (isNaN(d)) return val;
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const iso = typeof val === "string" && val.includes("T") ? val.slice(0, 10) : String(val);
+  const parts = iso.split("-");
+  if (parts.length === 3 && parts[0].length === 4) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return val;
 }
 
 function CampoTabla({ nombre, valor }) {

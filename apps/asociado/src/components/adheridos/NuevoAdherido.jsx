@@ -330,6 +330,10 @@ function Spinner({ small }) {
 
 function toInputDate(val) {
   if (!val) return "";
+  if (typeof val === "string") {
+    const iso = val.includes("T") ? val.slice(0, 10) : val;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  }
   const d = new Date(val);
   if (isNaN(d)) return "";
   return d.toISOString().slice(0, 10);
