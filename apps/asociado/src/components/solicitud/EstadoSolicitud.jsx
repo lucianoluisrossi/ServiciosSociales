@@ -9,7 +9,7 @@ export default function EstadoSolicitud({ solicitud, compacto = false }) {
       titulo: "Solicitud en revisión",
       desc:   "Tus cambios están siendo revisados por CELTA.",
     },
-    aprobada: {
+    aprobado: {
       pill:   "bg-emerald-100 text-emerald-700",
       bar:    "bg-emerald-400",
       icon:   "✅",
@@ -18,7 +18,7 @@ export default function EstadoSolicitud({ solicitud, compacto = false }) {
         ? "Tus cambios fueron aprobados."
         : `Tus cambios fueron aprobados. ${EMAIL_REMINDER}`,
     },
-    rechazada: {
+    rechazado: {
       pill:   "bg-rose-100 text-rose-700",
       bar:    "bg-rose-400",
       icon:   "❌",

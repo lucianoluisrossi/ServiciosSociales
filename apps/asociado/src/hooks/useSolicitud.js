@@ -34,7 +34,7 @@ export function useSolicitud() {
       const q = query(
         collection(db, "solicitudes"),
         where("titularDni", "==", dniAsociado),
-        where("estado", "in", ["pendiente", "aprobada", "rechazada", "costo_rechazado"]),
+        where("estado", "in", ["pendiente", "aprobado", "rechazado", "costo_rechazado"]),
         orderBy("creadoEn", "desc"),
         limit(1)
       );
