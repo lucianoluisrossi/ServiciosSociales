@@ -159,7 +159,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
             <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
               <p className="text-sm font-bold text-amber-800">📋 Antes de continuar:</p>
               <p className="text-sm text-amber-700 mt-1 leading-relaxed">
-                Tené en mano el <strong>DNI físico</strong> del familiar que querés agregar. Puede ser el DNI verde (antiguo) o la tarjeta plástica nueva.
+                Tené en mano el <strong>DNI físico</strong> del familiar que querés agregar.
               </p>
             </div>
           </div>
