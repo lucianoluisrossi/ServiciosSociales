@@ -2,7 +2,7 @@ import { useState } from "react";
 import SubirDNI from "./SubirDNI";
 
 const PARENTESCOS = [
-  "Cónyuge", "Hijo/a", "Padre", "Madre", "Hermano/a",
+  "Cónyuge", "Concubino/a", "Hijo/a", "Padre", "Madre", "Hermano/a",
   "Abuelo/a", "Nieto/a", "Suegro/a", "Cuñado/a", "Otro",
 ];
 

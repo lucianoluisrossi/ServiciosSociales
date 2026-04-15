@@ -7,7 +7,7 @@ import { useToast } from "../ui/Toast";
 import ScannerDNI from "../ui/ScannerDNI";
 
 const PARENTESCOS = [
-  "Cónyuge", "Hijo/a", "Padre", "Madre", "Hermano/a",
+  "Cónyuge", "Concubino/a", "Hijo/a", "Padre", "Madre", "Hermano/a",
   "Abuelo/a", "Nieto/a", "Suegro/a", "Cuñado/a", "Otro",
 ];
 
