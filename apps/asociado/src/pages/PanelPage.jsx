@@ -77,7 +77,7 @@ export default function PanelPage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-10">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5 space-y-4 pb-28">
         {solicitudActual && <EstadoSolicitud solicitud={solicitudActual} />}
 
         <DatosTitular titular={titular} />
