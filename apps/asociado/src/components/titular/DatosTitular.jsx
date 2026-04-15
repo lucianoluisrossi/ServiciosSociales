@@ -1,28 +1,44 @@
 export default function DatosTitular({ titular }) {
   if (!titular) return null;
+
+  const iniciales = titular.titNom
+    ? titular.titNom.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()
+    : "?";
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Encabezado con nombre */}
-      <div className="bg-blue-600 px-4 py-4">
-        <p className="text-xs text-blue-200 uppercase tracking-wide font-medium mb-0.5">Titular</p>
-        <h2 className="text-lg font-bold text-white leading-tight">{titular.titNom ?? "—"}</h2>
+      {/* Perfil */}
+      <div className="px-5 py-4 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center shrink-0 shadow-sm">
+          <span className="text-white font-bold text-sm">{iniciales}</span>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Titular</p>
+          <h2 className="text-base font-bold text-gray-900 leading-tight">{titular.titNom ?? "—"}</h2>
+        </div>
       </div>
+
       {/* Grilla de datos */}
-      <div className="grid grid-cols-2 gap-px bg-gray-100">
-        <Dato label="N° Documento"   value={titular.socDocNro} />
-        <Dato label="Cód. Asociado"  value={titular.cliCod} />
-        <Dato label="Cuenta"         value={titular.sumNro} />
-        <Dato label="Fecha Nac."     value={formatFecha(titular.cliFecNac)} />
-        <Dato label="Fecha Adhesión" value={formatFecha(titular.sumFacFAd)} fullWidth />
+      <div className="border-t border-gray-100 grid grid-cols-2">
+        <Dato label="Documento"      value={titular.socDocNro} />
+        <Dato label="Cód. Asociado"  value={titular.cliCod}    left />
+        <Dato label="Cuenta"         value={titular.sumNro}    top />
+        <Dato label="Fecha Nac."     value={formatFecha(titular.cliFecNac)} left top />
+        <Dato label="Adherido desde" value={formatFecha(titular.sumFacFAd)} top fullWidth />
       </div>
     </div>
   );
 }
 
-function Dato({ label, value, fullWidth }) {
+function Dato({ label, value, fullWidth, left, top }) {
   return (
-    <div className={`bg-white px-4 py-3 ${fullWidth ? "col-span-2" : ""}`}>
-      <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+    <div className={[
+      "px-5 py-3",
+      fullWidth ? "col-span-2" : "",
+      left ? "border-l border-gray-100" : "",
+      top  ? "border-t border-gray-100" : "",
+    ].join(" ")}>
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">{label}</p>
       <p className="text-sm font-semibold text-gray-800">{value ?? "—"}</p>
     </div>
   );

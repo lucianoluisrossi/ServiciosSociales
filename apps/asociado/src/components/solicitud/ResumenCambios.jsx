@@ -40,15 +40,18 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-amber-200">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Barra superior ámbar */}
+      <div className="h-1 bg-amber-400" />
       {/* Encabezado */}
-      <div className="px-4 py-3 border-b border-amber-100 bg-amber-50/50 rounded-t-xl">
-        <h2 className="text-sm font-semibold text-amber-800">
-          Cambios pendientes de envío ({cambios.length})
-        </h2>
-        <p className="text-xs text-amber-600 mt-0.5">
-          Revisá los cambios antes de enviar la solicitud.
-        </p>
+      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            Cambios pendientes
+            <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{cambios.length}</span>
+          </h2>
+          <p className="text-xs text-gray-400 mt-0.5">Revisá antes de enviar</p>
+        </div>
       </div>
 
       {/* Lista de cambios */}
@@ -103,20 +106,28 @@ export default function ResumenCambios({ cambios, adheridos, titular, onQuitarCa
       )}
 
       {/* Botón enviar */}
-      <div className="px-4 py-3 border-t border-gray-100">
+      <div className="px-4 py-4 border-t border-gray-100 bg-gray-50/50">
         <button
           onClick={handleEnviar}
           disabled={enviando || tienePendiente || emailRegistrado === undefined}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+          className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold py-3.5 rounded-xl transition-colors shadow-sm"
         >
-          {enviando ? "Enviando..." : tienePendiente ? "Solicitud pendiente de revisión" : "Enviar solicitud de cambios"}
+          {enviando
+            ? <span className="flex items-center justify-center gap-2"><Spinner /> Enviando...</span>
+            : tienePendiente
+              ? "⏳ Solicitud pendiente de revisión"
+              : "Enviar solicitud →"}
         </button>
         <p className="text-xs text-gray-400 text-center mt-2">
-          Los cambios serán revisados por CELTA antes de aplicarse.
+          CELTA revisará los cambios antes de aplicarlos.
         </p>
       </div>
     </div>
   );
+}
+
+function Spinner() {
+  return <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin inline-block" />;
 }
 
 function etiquetaTipo(tipo) {

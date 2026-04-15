@@ -96,12 +96,22 @@ export default function LoginPage() {
 
       {/* Indicador de pasos */}
       <div className="flex items-center gap-2 mb-6">
-        <div className="w-8 h-1.5 bg-white rounded-full" />
-        <div className={`w-8 h-1.5 rounded-full transition-colors ${pasoIndicador === 2 ? "bg-white" : "bg-white/30"}`} />
+        {[1, 2].map((n) => (
+          <div key={n} className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+              n < pasoIndicador  ? "bg-blue-400 text-white" :
+              n === pasoIndicador ? "bg-white text-blue-700 shadow-md" :
+              "bg-white/20 text-white/50"
+            }`}>
+              {n < pasoIndicador ? "✓" : n}
+            </div>
+            {n < 2 && <div className={`w-8 h-0.5 rounded-full transition-colors ${pasoIndicador > 1 ? "bg-white" : "bg-white/30"}`} />}
+          </div>
+        ))}
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 overflow-hidden">
 
         {/* ── Paso 1: DNI ── */}
         {paso === "dni" && (
@@ -218,7 +228,11 @@ export default function LoginPage() {
                     value={d}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKey(i, e)}
-                    className="w-11 h-14 border-2 border-gray-200 focus:border-blue-500 rounded-xl text-center text-xl font-bold font-mono outline-none transition-colors"
+                    className={`w-12 h-14 border-2 rounded-xl text-center text-xl font-bold font-mono outline-none transition-all
+                      ${d
+                        ? "border-blue-500 bg-blue-600 text-white shadow-sm"
+                        : "border-gray-200 focus:border-blue-400 text-gray-900"
+                      }`}
                   />
                 ))}
               </div>

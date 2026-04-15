@@ -105,73 +105,69 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
 
       {/* Lista vacía */}
       {adheridos.length === 0 && !agregando && (
-        <p className="text-sm text-gray-400 text-center py-10">
-          No hay familiares adheridos.<br/>
-          <span className="text-xs">Podés agregar uno con el botón de arriba.</span>
-        </p>
+        <div className="text-center py-10 px-6">
+          <p className="text-3xl mb-3">👨‍👩‍👧‍👦</p>
+          <p className="text-sm font-medium text-gray-600">No hay familiares adheridos</p>
+          <p className="text-xs text-gray-400 mt-1">Agregá un familiar tocando el botón de arriba.</p>
+        </div>
       )}
 
       {adheridos.map((a) => {
         const cambio = cambioParaDni(a.socDocNro);
         const eliminado = cambio?.tipo === "eliminar";
         const editadoPendiente = cambio?.tipo === "editar";
+        const iniciales = a.socNom
+          ? a.socNom.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase()
+          : "?";
 
         return (
           <div key={a.socDocNro}>
             <div
-              className={`px-4 py-4 flex items-start justify-between gap-3 transition-colors
-                ${eliminado ? "bg-red-50 opacity-60" : "hover:bg-gray-50"}
+              className={`px-4 py-3.5 flex items-center gap-3 transition-colors border-b border-gray-50 last:border-0
+                ${eliminado ? "bg-rose-50 opacity-60" : "hover:bg-gray-50/80"}
                 ${editadoPendiente ? "bg-amber-50" : ""}
               `}
             >
+              {/* Avatar */}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold
+                ${eliminado ? "bg-rose-100 text-rose-500" : editadoPendiente ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}>
+                {iniciales}
+              </div>
+
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold text-gray-800">
-                    {a.socNom}
-                  </p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-sm font-semibold text-gray-900">{a.socNom}</p>
                   {a.pareDsc && (
-                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                      {a.pareDsc}
-                    </span>
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">{a.pareDsc}</span>
                   )}
                   {eliminado && (
-                    <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
-                      A eliminar
-                    </span>
+                    <span className="text-[10px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full font-semibold">A eliminar</span>
                   )}
                   {editadoPendiente && (
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                      Editado
-                    </span>
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold">Editado</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  DNI {a.socDocNro}
-                </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Nac: {formatFecha(a.cliFecNac)} · Adherido: {formatFecha(a.sumFacFAd)}
+                  DNI {a.socDocNro} · Nac. {formatFecha(a.cliFecNac)}
                 </p>
               </div>
 
               {!solicitudActiva && (
-                <div className="flex flex-col gap-2 shrink-0 pt-0.5">
+                <div className="flex gap-1.5 shrink-0">
                   {!eliminado && (
                     <button
                       onClick={() => handleEditar(a)}
-                      className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg font-medium transition-colors"
                     >
-                      Editar
+                      ✏️ Editar
                     </button>
                   )}
                   <button
                     onClick={() => handleEliminar(a)}
-                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors
-                      ${eliminado
-                        ? "text-gray-500 bg-gray-100 hover:bg-gray-200"
-                        : "text-red-600 bg-red-50 hover:bg-red-100"
-                      }`}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors
+                      ${eliminado ? "text-gray-500 bg-gray-100 hover:bg-gray-200" : "text-rose-600 bg-rose-50 hover:bg-rose-100"}`}
                   >
-                    {eliminado ? "Deshacer" : "Eliminar"}
+                    {eliminado ? "↩ Deshacer" : "🗑 Eliminar"}
                   </button>
                 </div>
               )}

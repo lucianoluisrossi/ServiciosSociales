@@ -59,17 +59,19 @@ export default function PanelPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-blue-700 text-white sticky top-0 z-10 shadow-md">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <header className="bg-gradient-to-r from-blue-800 to-indigo-700 text-white sticky top-0 z-10 shadow-lg">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center text-base">🤝</div>
+            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-lg shadow-inner">🤝</div>
             <div>
               <h1 className="text-sm font-bold leading-tight">Vínculos CELTA</h1>
-              <p className="text-xs text-blue-200 leading-tight">Servicio de Sepelios</p>
+              <p className="text-xs text-blue-200 leading-tight">
+                {titular?.titNom ? `Hola, ${titular.titNom.trim().split(" ")[0]}` : "Servicio de Sepelios"}
+              </p>
             </div>
           </div>
-          <button onClick={handleLogout} className="text-xs text-blue-200 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors">
+          <button onClick={handleLogout} className="text-xs text-white/70 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors font-medium">
             Salir
           </button>
         </div>
@@ -103,8 +105,8 @@ export default function PanelPage() {
 
         {historialPrevio.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">
-              Solicitudes anteriores
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest px-1">
+              Historial de solicitudes
             </h3>
             {historialPrevio.map((s) => (
               <EstadoSolicitud key={s.id} solicitud={s} compacto />
