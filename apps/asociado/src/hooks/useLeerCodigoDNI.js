@@ -18,11 +18,18 @@ export function parsearCodigoDNI(texto) {
 
   let apellido, nombre, dni, fechaNacRaw;
 
-  // Detectar formato: si partes[0] son solo dígitos → tiene CUIL al inicio
+  // Detectar formato por el primer campo
   const primerCampo = partes[0]?.trim();
-  const esFormatoConCuil = /^\d+$/.test(primerCampo);
+  const esFormatoConCuil   = /^\d+$/.test(primerCampo);
+  // Formato antiguo con @ al inicio: "" @ DNI @ EJEMPLAR @ N @ APELLIDO @ NOMBRE @ PAIS @ FECHA_NAC ...
+  const esFormatoArrobaPrimero = primerCampo === "" && /^\d+$/.test(partes[1]?.trim());
 
-  if (esFormatoConCuil) {
+  if (esFormatoArrobaPrimero) {
+    apellido    = partes[4]?.trim();
+    nombre      = partes[5]?.trim();
+    dni         = partes[1]?.trim().replace(/\D/g, "");
+    fechaNacRaw = partes[7]?.trim();
+  } else if (esFormatoConCuil) {
     // Formato nuevo: CUIL @ APELLIDO @ NOMBRE @ SEXO @ DNI @ EJEMPLAR @ FECHA_NAC ...
     apellido    = partes[1]?.trim();
     nombre      = partes[2]?.trim();

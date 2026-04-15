@@ -185,6 +185,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
       {/* SCANNER — se monta y desmonta limpiamente */}
       {paso === PASO.SCANNER && (
         <ScannerDNI
+          key={intentosFallidos}
           onDetectado={handleDetectado}
           onError={handleErrorScanner}
           onCancelar={handleCancelarScanner}
