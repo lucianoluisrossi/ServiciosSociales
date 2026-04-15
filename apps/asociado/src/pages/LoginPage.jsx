@@ -269,11 +269,6 @@ export default function LoginPage() {
         )}
       </div>
 
-      <p className="text-blue-300 text-xs mt-6 text-center">
-        ¿No podés ingresar?{" "}
-        <a href="tel:+54XXXXXXXX" className="text-white underline font-medium">Llamanos</a>
-        {" "}o acercate a nuestras oficinas.
-      </p>
     </main>
   );
 }
