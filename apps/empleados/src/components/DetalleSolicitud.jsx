@@ -126,8 +126,10 @@ export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVol
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full mt-1 ${
             sol.estado === "pendiente" ? "bg-yellow-100 text-yellow-800" :
-            sol.estado === "aprobada" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-          }`}>{sol.estado === "pendiente" ? "Pendiente" : sol.estado === "aprobada" ? "Aprobada" : "Rechazada"}</span>
+            sol.estado === "aprobado"  ? "bg-green-100 text-green-800"  : "bg-red-100 text-red-800"
+          }`}>
+            {sol.estado === "pendiente" ? "Pendiente" : sol.estado === "aprobado" ? "Aprobado" : "Rechazado"}
+          </span>
         </div>
       </div>
 

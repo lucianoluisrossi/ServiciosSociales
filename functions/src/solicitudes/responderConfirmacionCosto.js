@@ -48,14 +48,11 @@ exports.responderConfirmacionCosto = onCall(
       throw new HttpsError("failed-precondition", "Este link ya fue utilizado");
     }
 
-    // Actualizar estado de confirmación
+    // Actualizar estado de confirmación y volver a pendiente para que el empleado lo procese
     await docRef.update({
       "confirmacionCosto.estado": respuesta,
       "confirmacionCosto.respondidoEn": FieldValue.serverTimestamp(),
-      // Si rechaza el costo, la solicitud pasa a estado especial
-      ...(respuesta === "rechazado"
-        ? { estado: "costo_rechazado" }
-        : {}),
+      estado: "pendiente",
       actualizadoEn: FieldValue.serverTimestamp(),
     });
 
