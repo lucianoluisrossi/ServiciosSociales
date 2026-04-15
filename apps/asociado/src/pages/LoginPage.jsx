@@ -198,7 +198,6 @@ export default function LoginPage() {
                     type="tel"
                     inputMode="numeric"
                     autoComplete={i === 0 ? "one-time-code" : "off"}
-                    maxLength={1}
                     value={d}
                     onChange={e => handleOtpChange(i, e.target.value)}
                     onKeyDown={e => handleOtpKey(i, e)}
