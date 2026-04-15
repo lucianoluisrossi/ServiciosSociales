@@ -16,6 +16,23 @@ export default function LoginPage() {
   useEffect(() => {
     if (paso === "otp") setCountdown(60);
   }, [paso]);
+
+  // Web OTP API — Android Chrome
+  useEffect(() => {
+    if (paso !== "otp") return;
+    if (!("OTPCredential" in window)) return;
+    const ac = new AbortController();
+    navigator.credentials.get({ otp: { transport: ["sms"] }, signal: ac.signal })
+      .then((cred) => {
+        const digits = cred?.code?.replace(/\D/g, "").slice(0, 6) ?? "";
+        if (digits.length === 6) {
+          setOtp(digits.split(""));
+          otpRefs.current[5]?.focus();
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [paso]);
   useEffect(() => {
     if (countdown <= 0) return;
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
