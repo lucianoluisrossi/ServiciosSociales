@@ -129,48 +129,61 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
               `}
             >
               {/* Avatar */}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold
+              <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 text-sm font-bold
                 ${eliminado ? "bg-rose-100 text-rose-500" : editadoPendiente ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}>
                 {iniciales}
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-sm font-semibold text-gray-900">{a.socNom}</p>
+                {/* Nombre */}
+                <p className="text-base font-bold text-gray-900 leading-tight">{a.socNom}</p>
+
+                {/* Vínculo / estado */}
+                <div className="flex items-center gap-1.5 flex-wrap mt-1">
                   {a.pareDsc && (
-                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium">{a.pareDsc}</span>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{a.pareDsc}</span>
                   )}
                   {eliminado && (
-                    <span className="text-[10px] bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full font-semibold">A eliminar</span>
+                    <span className="text-xs bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full font-semibold">A eliminar</span>
                   )}
                   {editadoPendiente && (
-                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold">Editado</span>
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Editado</span>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  DNI {a.socDocNro} · Nac. {formatFecha(a.cliFecNac)}
-                </p>
-              </div>
 
-              {!solicitudActiva && (
-                <div className="flex gap-1.5 shrink-0">
-                  {!eliminado && (
-                    <button
-                      onClick={() => handleEditar(a)}
-                      className="text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg font-medium transition-colors"
-                    >
-                      ✏️ Editar
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleEliminar(a)}
-                    className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors
-                      ${eliminado ? "text-gray-500 bg-gray-100 hover:bg-gray-200" : "text-rose-600 bg-rose-50 hover:bg-rose-100"}`}
-                  >
-                    {eliminado ? "↩ Deshacer" : "🗑 Eliminar"}
-                  </button>
+                {/* Datos clave */}
+                <div className="grid grid-cols-2 gap-x-4 mt-2">
+                  <div>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">DNI</p>
+                    <p className="text-sm font-bold text-gray-800">{a.socDocNro}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Nacimiento</p>
+                    <p className="text-sm font-bold text-gray-800">{formatFecha(a.cliFecNac)}</p>
+                  </div>
                 </div>
-              )}
+
+                {/* Botones */}
+                {!solicitudActiva && (
+                  <div className="flex gap-2 mt-3">
+                    {!eliminado && (
+                      <button
+                        onClick={() => handleEditar(a)}
+                        className="flex-1 text-sm text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-xl font-semibold transition-colors"
+                      >
+                        ✏️ Editar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleEliminar(a)}
+                      className={`flex-1 text-sm px-3 py-2 rounded-xl font-semibold transition-colors
+                        ${eliminado ? "text-gray-500 bg-gray-100 hover:bg-gray-200" : "text-rose-600 bg-rose-50 hover:bg-rose-100"}`}
+                    >
+                      {eliminado ? "↩ Deshacer" : "🗑 Eliminar"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Formulario inline de edición */}

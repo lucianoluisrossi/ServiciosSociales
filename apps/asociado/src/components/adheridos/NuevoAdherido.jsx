@@ -149,20 +149,43 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
 
       {/* BIENVENIDA */}
       {paso === PASO.BIENVENIDA && (
-        <div className="text-center py-2 space-y-4">
-          <div>
-            <p className="text-3xl mb-2">🪪</p>
-            <p className="text-sm font-semibold text-gray-800">Agregar familiar</p>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Vamos a leer los datos del DNI automáticamente.<br />
-              <span className="font-medium text-gray-700">Tené el DNI del familiar a mano.</span>
+        <div className="py-2 space-y-4">
+          <div className="text-center">
+            <p className="text-4xl mb-3">🪪</p>
+            <p className="text-base font-bold text-gray-900">Agregar un familiar</p>
+            <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+              Usamos la cámara del celular para leer el código del DNI y completar los datos automáticamente.
             </p>
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+              <p className="text-sm font-bold text-amber-800">📋 Antes de continuar:</p>
+              <p className="text-sm text-amber-700 mt-1 leading-relaxed">
+                Tené en mano el <strong>DNI físico</strong> del familiar que querés agregar. Puede ser el DNI verde (antiguo) o la tarjeta plástica nueva.
+              </p>
+            </div>
           </div>
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-left space-y-1.5">
-            <p className="text-xs font-semibold text-blue-800">¿Cómo funciona?</p>
-            <p className="text-xs text-blue-700">📷 Abrimos la cámara</p>
-            <p className="text-xs text-blue-700">🔍 Apuntás al código del DNI</p>
-            <p className="text-xs text-blue-700">✨ Los datos se completan solos</p>
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-4 text-left space-y-3">
+            <p className="text-sm font-bold text-blue-900">¿Cómo funciona?</p>
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">📷</span>
+              <div>
+                <p className="text-sm font-semibold text-blue-800">Abrimos la cámara</p>
+                <p className="text-xs text-blue-600 mt-0.5">Apuntá la cámara al código de barras o código QR que está en el dorso o frente del DNI.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">🔍</span>
+              <div>
+                <p className="text-sm font-semibold text-blue-800">Escaneamos el código</p>
+                <p className="text-xs text-blue-600 mt-0.5">Mantené el DNI quieto y bien iluminado. El sistema detecta el código solo, sin tocar nada.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-xl shrink-0">✅</span>
+              <div>
+                <p className="text-sm font-semibold text-blue-800">Los datos se completan solos</p>
+                <p className="text-xs text-blue-600 mt-0.5">Nombre, DNI y fecha de nacimiento se cargan automáticamente. Solo tenés que confirmar el parentesco.</p>
+              </div>
+            </div>
           </div>
           {mensajeError && (
             <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-left">
