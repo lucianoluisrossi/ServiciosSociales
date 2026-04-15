@@ -5,7 +5,6 @@ import NuevoAdherido from "./NuevoAdherido";
 export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, onQuitarCambio, solicitudActiva }) {
   const [editando, setEditando] = useState(null);
   const [agregando, setAgregando] = useState(false);
-  const [errorDniDuplicado, setErrorDniDuplicado] = useState(null);
 
   const cambioParaDni = (dni) => cambios.find((c) => c.adheridoDni === dni);
 
@@ -42,26 +41,14 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
 
   const handleGuardarNuevo = (datos, fotoFrentePath, fotoDorsoPath) => {
     const dni = datos.socDocNro?.trim();
-
-    // Verificar duplicado contra lista existente
-    const yaExisteEnLista = adheridos.some((a) => a.socDocNro === dni);
-    // Verificar duplicado contra cambios pendientes en esta sesión
+    const yaExisteEnLista   = adheridos.some((a) => a.socDocNro === dni);
     const yaExisteEnCambios = cambios.some((c) => c.tipo === "agregar" && c.adheridoDni === dni);
-
     if (yaExisteEnLista || yaExisteEnCambios) {
-      setErrorDniDuplicado(dni);
-      return;
+      return { ok: false, error: `El DNI ${dni} ya está en la lista. No se puede agregar dos veces.` };
     }
-
-    setErrorDniDuplicado(null);
-    onAgregarCambio({
-      tipo: "agregar",
-      adheridoDni: dni,
-      datos,
-      fotoFrentePath,
-      fotoDorsoPath,
-    });
+    onAgregarCambio({ tipo: "agregar", adheridoDni: dni, datos, fotoFrentePath, fotoDorsoPath });
     setAgregando(false);
+    return { ok: true };
   };
 
   return (
@@ -83,24 +70,12 @@ export default function ListaAdheridos({ adheridos, cambios, onAgregarCambio, on
         )}
       </div>
 
-      {/* Formulario para agregar */}
+      {/* Wizard fullscreen para agregar */}
       {agregando && (
-        <div className="p-4 border-b border-blue-50 bg-blue-50/40">
-          {errorDniDuplicado && (
-            <div className="mb-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              <p className="text-xs font-medium text-red-700">
-                ⚠️ El familiar con DNI {errorDniDuplicado} ya está en la lista.
-              </p>
-              <p className="text-xs text-red-500 mt-0.5">
-                No se puede agregar el mismo DNI dos veces.
-              </p>
-            </div>
-          )}
-          <NuevoAdherido
-            onGuardar={handleGuardarNuevo}
-            onCancelar={() => { setAgregando(false); setErrorDniDuplicado(null); }}
-          />
-        </div>
+        <NuevoAdherido
+          onGuardar={handleGuardarNuevo}
+          onCancelar={() => setAgregando(false)}
+        />
       )}
 
       {/* Lista vacía */}
