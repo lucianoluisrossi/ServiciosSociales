@@ -4,7 +4,8 @@ import { getFirestore, collection, query, where, orderBy, limit, onSnapshot, add
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../services/firebase";
 
-const registrarEmailFn = httpsCallable(functions, "registrarEmailAsociado");
+const registrarEmailFn          = httpsCallable(functions, "registrarEmailAsociado");
+const responderConfirmacionFn   = httpsCallable(functions, "responderConfirmacionCosto");
 
 export function useSolicitud() {
   const [cambios, setCambios]                 = useState([]);
@@ -33,7 +34,7 @@ export function useSolicitud() {
       const q = query(
         collection(db, "solicitudes"),
         where("titularDni", "==", dniAsociado),
-        where("estado", "in", ["pendiente", "aprobada", "rechazada"]),
+        where("estado", "in", ["pendiente", "aprobada", "rechazada", "costo_rechazado"]),
         orderBy("creadoEn", "desc"),
         limit(1)
       );
@@ -45,7 +46,8 @@ export function useSolicitud() {
           const ahora   = Date.now();
           const creadoEn = data.creadoEn?.toMillis?.() ?? 0;
           const horas48  = 48 * 60 * 60 * 1000;
-          if (data.estado === "pendiente" || (ahora - creadoEn < horas48)) {
+          const necesitaConfirmacionCosto = data.confirmacionCosto?.estado === "pendiente";
+          if (data.estado === "pendiente" || necesitaConfirmacionCosto || (ahora - creadoEn < horas48)) {
             setSolicitudActual(data);
           } else {
             setSolicitudActual(null);
@@ -117,5 +119,11 @@ export function useSolicitud() {
 
   const tienePendiente = solicitudActual?.estado === "pendiente";
 
-  return { cambios, solicitudActual, tienePendiente, agregarCambio, quitarCambio, enviarSolicitud, enviando, emailRegistrado };
+  const confirmarCosto = useCallback(async (respuesta) => {
+    const token = solicitudActual?.confirmacionCosto?.token;
+    if (!token) throw new Error("Token de confirmación no disponible");
+    await responderConfirmacionFn({ token, respuesta });
+  }, [solicitudActual]);
+
+  return { cambios, solicitudActual, tienePendiente, agregarCambio, quitarCambio, enviarSolicitud, enviando, emailRegistrado, confirmarCosto };
 }

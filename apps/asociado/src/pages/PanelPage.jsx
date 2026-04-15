@@ -4,6 +4,7 @@ import DatosTitular from "../components/titular/DatosTitular";
 import ListaAdheridos from "../components/adheridos/ListaAdheridos";
 import EstadoSolicitud from "../components/solicitud/EstadoSolicitud";
 import ResumenCambios from "../components/solicitud/ResumenCambios";
+import ConfirmarCostoInApp from "../components/solicitud/ConfirmarCostoInApp";
 import { useAdheridos } from "../hooks/useAdheridos";
 import { useSolicitud } from "../hooks/useSolicitud";
 
@@ -21,6 +22,7 @@ export default function PanelPage() {
     enviarSolicitud,
     enviando,
     emailRegistrado,
+    confirmarCosto,
   } = useSolicitud();
 
   const handleLogout = async () => {
@@ -58,8 +60,16 @@ export default function PanelPage() {
     (s) => s.id !== solicitudActual?.id
   );
 
+  const necesitaConfirmacionCosto = solicitudActual?.confirmacionCosto?.estado === "pendiente";
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
+      {necesitaConfirmacionCosto && (
+        <ConfirmarCostoInApp
+          solicitud={solicitudActual}
+          onConfirmar={confirmarCosto}
+        />
+      )}
       <header className="bg-gradient-to-r from-blue-800 to-indigo-700 text-white sticky top-0 z-10 shadow-lg">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">

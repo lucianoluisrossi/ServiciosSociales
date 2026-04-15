@@ -1,29 +1,40 @@
+const EMAIL_REMINDER = "Revisá tu casilla de correo para ver el detalle completo.";
+
 export default function EstadoSolicitud({ solicitud, compacto = false }) {
   const config = {
     pendiente: {
-      pill: "bg-amber-100 text-amber-700",
-      bar:  "bg-amber-400",
-      icon: "⏳",
+      pill:   "bg-amber-100 text-amber-700",
+      bar:    "bg-amber-400",
+      icon:   "⏳",
       titulo: "Solicitud en revisión",
-      desc: "Tus cambios están siendo revisados por CELTA.",
+      desc:   "Tus cambios están siendo revisados por CELTA.",
     },
     aprobada: {
-      pill: "bg-emerald-100 text-emerald-700",
-      bar:  "bg-emerald-400",
-      icon: "✅",
+      pill:   "bg-emerald-100 text-emerald-700",
+      bar:    "bg-emerald-400",
+      icon:   "✅",
       titulo: "Solicitud aprobada",
-      desc: compacto
+      desc:   compacto
         ? "Tus cambios fueron aprobados."
-        : "Tus cambios fueron aprobados. Podés hacer nuevas modificaciones.",
+        : `Tus cambios fueron aprobados. ${EMAIL_REMINDER}`,
     },
     rechazada: {
-      pill: "bg-rose-100 text-rose-700",
-      bar:  "bg-rose-400",
-      icon: "❌",
-      titulo: "Solicitud rechazada",
-      desc: solicitud.motivoRechazo
-        ? `Motivo: ${solicitud.motivoRechazo}.${!compacto ? " Podés corregir y enviar una nueva solicitud." : ""}`
-        : `Tu solicitud fue rechazada.${!compacto ? " Podés corregir y enviar una nueva solicitud." : ""}`,
+      pill:   "bg-rose-100 text-rose-700",
+      bar:    "bg-rose-400",
+      icon:   "❌",
+      titulo: "Solicitud observada",
+      desc:   solicitud.motivoRechazo
+        ? `Motivo: ${solicitud.motivoRechazo}.${!compacto ? ` ${EMAIL_REMINDER} Podés corregir y enviar una nueva solicitud.` : ""}`
+        : `Tu solicitud fue observada.${!compacto ? ` ${EMAIL_REMINDER} Podés corregir y enviar una nueva solicitud.` : ""}`,
+    },
+    costo_rechazado: {
+      pill:   "bg-rose-100 text-rose-700",
+      bar:    "bg-rose-400",
+      icon:   "❌",
+      titulo: "Costo no aceptado",
+      desc:   compacto
+        ? "Rechazaste el costo mensual del servicio."
+        : `Rechazaste el costo mensual del servicio. CELTA se comunicará con vos.`,
     },
   };
 
