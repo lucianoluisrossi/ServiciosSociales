@@ -8,6 +8,7 @@ const BADGE = {
   aprobado:  "bg-green-100 text-green-800",
   rechazado: "bg-red-100 text-red-800",
 };
+const LABEL = { pendiente: "Pendiente", aprobado: "Aprobado", rechazado: "Rechazado" };
 
 function formatFecha(ts) {
   if (!ts) return "—";
@@ -19,6 +20,7 @@ export default function ListaSolicitudes({ onSeleccionar }) {
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando]       = useState(true);
   const [filtro, setFiltro]           = useState("pendiente");
+  const [soloPendienteCarga, setSoloPendienteCarga] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "solicitudes"), orderBy("creadoEn", "desc"));
@@ -29,9 +31,9 @@ export default function ListaSolicitudes({ onSeleccionar }) {
     return unsub;
   }, []);
 
-  const visibles = filtro === "todos"
-    ? solicitudes
-    : solicitudes.filter(s => s.estado === filtro);
+  const visibles = solicitudes
+    .filter(s => filtro === "todos" || s.estado === filtro)
+    .filter(s => !soloPendienteCarga || (s.estado !== "pendiente" && !s.cargadaAlSistema));
 
   const conteo = estado => solicitudes.filter(s => s.estado === estado).length;
 
@@ -45,7 +47,7 @@ export default function ListaSolicitudes({ onSeleccionar }) {
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-2 mb-5 flex-wrap">
+      <div className="flex gap-2 mb-3 flex-wrap">
         {FILTROS.map(f => (
           <button
             key={f}
@@ -56,12 +58,21 @@ export default function ListaSolicitudes({ onSeleccionar }) {
                 : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
             }`}
           >
-            {f === "todos"
-              ? `Todas (${solicitudes.length})`
-              : `${f.charAt(0).toUpperCase() + f.slice(1)} (${conteo(f)})`}
+            {f === "todos" ? `Todas (${solicitudes.length})` : `${LABEL[f] ?? f} (${conteo(f)})`}
           </button>
         ))}
       </div>
+
+      {/* Filtro carga GLM */}
+      <label className="flex items-center gap-2 mb-5 cursor-pointer w-fit">
+        <input
+          type="checkbox"
+          checked={soloPendienteCarga}
+          onChange={e => setSoloPendienteCarga(e.target.checked)}
+          className="w-4 h-4 accent-blue-700"
+        />
+        <span className="text-sm text-gray-600">Solo pendientes de carga en GLM</span>
+      </label>
 
       {cargando && (
         <p className="text-center text-gray-500 py-10">Cargando solicitudes...</p>
@@ -97,9 +108,18 @@ export default function ListaSolicitudes({ onSeleccionar }) {
                     {s.cambios?.length ?? 0} cambio{s.cambios?.length !== 1 ? "s" : ""}
                   </div>
                 </div>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${BADGE[s.estado] ?? "bg-gray-100 text-gray-600"}`}>
-                  {s.estado}
-                </span>
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${BADGE[s.estado] ?? "bg-gray-100 text-gray-600"}`}>
+                    {LABEL[s.estado] ?? s.estado}
+                  </span>
+                  {s.estado !== "pendiente" && (
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      s.cargadaAlSistema ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                    }`}>
+                      {s.cargadaAlSistema ? "✓ GLM" : "Sin cargar"}
+                    </span>
+                  )}
+                </div>
               </div>
             </button>
           </li>

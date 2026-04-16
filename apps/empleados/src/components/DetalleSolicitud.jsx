@@ -1,4 +1,4 @@
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "../services/firebase";
 import VisorDNI from "./VisorDNI";
@@ -81,6 +81,16 @@ export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVol
 
   const pendiente = sol.estado === "pendiente";
 
+  const toggleCargada = async () => {
+    try {
+      await updateDoc(doc(db, "solicitudes", sol.id), {
+        cargadaAlSistema: !sol.cargadaAlSistema,
+      });
+    } catch (e) {
+      console.error("Error al actualizar cargadaAlSistema:", e);
+    }
+  };
+
   return (
     <div>
       {/* Encabezado */}
@@ -132,6 +142,26 @@ export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVol
           </span>
         </div>
       </div>
+
+      {/* Toggle: cargada al sistema GLM */}
+      {!pendiente && (
+        <div className="bg-white rounded-xl shadow-sm px-5 py-3 mb-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Cargada al sistema GLM</p>
+            <p className="text-xs text-gray-400 mt-0.5">Marcá cuando hayas volcado los cambios al sistema</p>
+          </div>
+          <button
+            onClick={toggleCargada}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+              sol.cargadaAlSistema
+                ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
+                : "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"
+            }`}
+          >
+            {sol.cargadaAlSistema ? "✓ Cargada" : "Pendiente de carga"}
+          </button>
+        </div>
+      )}
 
       {sol.tieneIngresosManual && (
         <div className="bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-2.5 mb-4 text-sm text-yellow-800">
