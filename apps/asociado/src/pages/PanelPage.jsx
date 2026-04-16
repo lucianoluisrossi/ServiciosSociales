@@ -26,6 +26,9 @@ export default function PanelPage() {
     confirmarCosto,
   } = useSolicitud();
 
+  const [dismissedCosto, setDismissedCosto] = useState(false);
+  useEffect(() => { setDismissedCosto(false); }, [solicitudActual?.id]);
+
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/");
@@ -60,9 +63,6 @@ export default function PanelPage() {
   const historialPrevio = historialSolicitudes.filter(
     (s) => s.id !== solicitudActual?.id
   );
-
-  const [dismissedCosto, setDismissedCosto] = useState(false);
-  useEffect(() => { setDismissedCosto(false); }, [solicitudActual?.id]);
 
   const necesitaConfirmacionCosto = !dismissedCosto && solicitudActual?.confirmacionCosto?.estado === "pendiente";
 
