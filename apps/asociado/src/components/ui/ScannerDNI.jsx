@@ -52,9 +52,7 @@ export default function ScannerDNI({ onDetectado, onError, onCancelar }) {
         setIniciando(false);
       } catch (err) {
         console.error("Error scanner:", err);
-        const msg = err?.message?.includes("Permission") || err?.name === "NotAllowedError"
-          ? "No se otorgó permiso para usar la cámara."
-          : "No se pudo iniciar la cámara. Intentá recargar la página.";
+        const msg = "No pudimos acceder a la cámara. Podés ingresar los datos del DNI a mano.";
         setErrorCam(msg);
         setIniciando(false);
         onError?.(msg);

@@ -234,7 +234,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
           <ScannerDNI
             key={intentosFallidos}
             onDetectado={handleDetectado}
-            onError={() => {}}
+            onError={() => { setDatosManual(true); setPaso(PASO.MANUAL); }}
             onCancelar={() => setPaso(PASO.INSTRUCCIONES)}
           />
         )}
@@ -295,7 +295,7 @@ export default function NuevoAdherido({ onGuardar, onCancelar }) {
               <h2 className="text-2xl font-bold text-gray-900">Ingreso manual</h2>
               <p className="text-sm text-gray-500 mt-1">
                 {intentosFallidos > 0
-                  ? "No se pudo leer el código. Ingresá los datos a mano."
+                  ? "No pudimos leer el código del DNI. Ingresá los datos manualmente y adjuntá una foto del frente del DNI."
                   : "Ingresá los datos del familiar manualmente."}
               </p>
             </div>
