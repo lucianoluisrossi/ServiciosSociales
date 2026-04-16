@@ -169,25 +169,49 @@ export default function DetalleSolicitud({ solicitud, inicial, onResuelta, onVol
         </div>
       )}
 
-      {/* Banner estado confirmación de costo */}
+      {/* Timeline de aprobaciones */}
       {sol.confirmacionCosto && (
-        <div className={`rounded-lg border px-4 py-3 mb-4 text-sm ${
-          sol.confirmacionCosto.estado === "pendiente"
-            ? "bg-blue-50 border-blue-200 text-blue-800"
-            : sol.confirmacionCosto.estado === "aprobado"
-            ? "bg-green-50 border-green-200 text-green-800"
-            : "bg-red-50 border-red-200 text-red-800"
-        }`}>
-          <p className="font-semibold">
-            {sol.confirmacionCosto.estado === "pendiente" && "⏳ Esperando confirmación de costo por parte del asociado"}
-            {sol.confirmacionCosto.estado === "aprobado"  && "✅ Asociado aceptó el costo mensual"}
-            {sol.confirmacionCosto.estado === "rechazado" && "❌ Asociado rechazó el costo mensual — requiere atención"}
-          </p>
-          {sol.confirmacionCosto.itemsConCosto?.map((d, i) => (
-            <p key={i} className="text-xs mt-1 opacity-80">
-              {d.socNom ?? `DNI ${d.adheridoDni}`}: {d.costoMensual}
-            </p>
-          ))}
+        <div className="bg-white rounded-xl shadow-sm px-5 py-4 mb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Aprobaciones</p>
+          <div className="space-y-3">
+
+            {/* Fila empleado */}
+            <div className="flex items-start gap-3">
+              <span className="w-7 h-7 rounded-full bg-blue-700 text-white text-xs flex items-center justify-center font-bold shrink-0 mt-0.5">E</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-gray-800">Empleado — aprobó con costo</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {sol.confirmacionCosto.itemsConCosto?.map((d, i) => (
+                    <span key={i} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">
+                      {d.socNom ?? `DNI ${d.adheridoDni}`}: {d.costoMensual}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold shrink-0">✓</span>
+            </div>
+
+            {/* Fila socio */}
+            <div className="flex items-center gap-3">
+              <span className={`w-7 h-7 rounded-full text-white text-xs flex items-center justify-center font-bold shrink-0 ${
+                sol.confirmacionCosto.estado === "aprobado"  ? "bg-green-600" :
+                sol.confirmacionCosto.estado === "rechazado" ? "bg-red-500"   : "bg-gray-300"
+              }`}>S</span>
+              <p className="text-sm font-semibold text-gray-800 flex-1">
+                {sol.confirmacionCosto.estado === "pendiente" && "Socio — pendiente de confirmación"}
+                {sol.confirmacionCosto.estado === "aprobado"  && "Socio — aceptó el costo mensual"}
+                {sol.confirmacionCosto.estado === "rechazado" && "Socio — rechazó el costo mensual"}
+              </p>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${
+                sol.confirmacionCosto.estado === "aprobado"  ? "bg-green-100 text-green-700" :
+                sol.confirmacionCosto.estado === "rechazado" ? "bg-red-100 text-red-700"     : "bg-yellow-100 text-yellow-700"
+              }`}>
+                {sol.confirmacionCosto.estado === "aprobado"  ? "✓" :
+                 sol.confirmacionCosto.estado === "rechazado" ? "✕" : "⏳"}
+              </span>
+            </div>
+
+          </div>
         </div>
       )}
 

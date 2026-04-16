@@ -13,6 +13,9 @@ export default function AccionesRevision({ solicitudId, solicitud, onResuelta })
   // Cambios de tipo "agregar" que pueden tener datos adicionales al aprobar
   const cambiosAgregar = (solicitud?.cambios ?? []).filter((c) => c.tipo === "agregar");
 
+  // Si el socio ya confirmó el costo, no mostrar campos de costo nuevamente
+  const socioYaConfirmo = solicitud?.confirmacionCosto?.estado === "aprobado";
+
   // Estado para observaciones y costo por cada familiar a agregar (keyed por adheridoDni)
   const [datosAprobacion, setDatosAprobacion] = useState(() =>
     Object.fromEntries(
@@ -86,8 +89,16 @@ export default function AccionesRevision({ solicitudId, solicitud, onResuelta })
         {modo === "aprobar" ? "¿Confirmás la aprobación?" : "Indicá el motivo del rechazo"}
       </p>
 
+      {/* Si el socio ya confirmó, solo mostrar aviso */}
+      {modo === "aprobar" && socioYaConfirmo && (
+        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
+          <p className="text-sm font-semibold text-green-800">✅ El socio ya confirmó el costo mensual</p>
+          <p className="text-xs text-green-700 mt-0.5">No es necesario reingresar datos de costo.</p>
+        </div>
+      )}
+
       {/* Campos adicionales al aprobar — uno por cada familiar a agregar */}
-      {modo === "aprobar" && cambiosAgregar.length > 0 && (
+      {modo === "aprobar" && cambiosAgregar.length > 0 && !socioYaConfirmo && (
         <div className="mb-4 space-y-4">
           {cambiosAgregar.map((c) => (
             <div key={c.adheridoDni} className="bg-white border border-green-200 rounded-lg p-3 space-y-2">
