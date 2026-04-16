@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function ConfirmarCostoInApp({ solicitud, onConfirmar }) {
+export default function ConfirmarCostoInApp({ solicitud, onConfirmar, onCerrar }) {
   const [procesando, setProcesando] = useState(false);
   const [respondido, setRespondido] = useState(null); // "aprobado" | "rechazado"
   const [error, setError]           = useState(null);
@@ -27,6 +27,7 @@ export default function ConfirmarCostoInApp({ solicitud, onConfirmar }) {
         colorIcono="text-emerald-500"
         titulo="¡Confirmación registrada!"
         texto="Aceptaste el costo mensual del servicio. CELTA procesará el alta."
+        onCerrar={onCerrar}
       />
     );
   }
@@ -38,6 +39,7 @@ export default function ConfirmarCostoInApp({ solicitud, onConfirmar }) {
         colorIcono="text-rose-500"
         titulo="Rechazo registrado"
         texto="Rechazaste el costo mensual. CELTA se comunicará con vos para buscar una solución."
+        onCerrar={onCerrar}
       />
     );
   }
@@ -112,12 +114,18 @@ export default function ConfirmarCostoInApp({ solicitud, onConfirmar }) {
   );
 }
 
-function Resultado({ icono, colorIcono, titulo, texto }) {
+function Resultado({ icono, colorIcono, titulo, texto, onCerrar }) {
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center px-6 text-center">
       <div className={`text-6xl mb-4 ${colorIcono}`}>{icono}</div>
       <h2 className="text-2xl font-bold text-gray-900 mb-2">{titulo}</h2>
-      <p className="text-base text-gray-500 leading-relaxed">{texto}</p>
+      <p className="text-base text-gray-500 leading-relaxed mb-8">{texto}</p>
+      <button
+        onClick={onCerrar}
+        className="w-full max-w-xs bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl text-base transition-colors"
+      >
+        Volver al panel
+      </button>
     </div>
   );
 }

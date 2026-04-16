@@ -1,5 +1,6 @@
 import { getAuth, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import DatosTitular from "../components/titular/DatosTitular";
 import ListaAdheridos from "../components/adheridos/ListaAdheridos";
 import EstadoSolicitud from "../components/solicitud/EstadoSolicitud";
@@ -60,7 +61,10 @@ export default function PanelPage() {
     (s) => s.id !== solicitudActual?.id
   );
 
-  const necesitaConfirmacionCosto = solicitudActual?.confirmacionCosto?.estado === "pendiente";
+  const [dismissedCosto, setDismissedCosto] = useState(false);
+  useEffect(() => { setDismissedCosto(false); }, [solicitudActual?.id]);
+
+  const necesitaConfirmacionCosto = !dismissedCosto && solicitudActual?.confirmacionCosto?.estado === "pendiente";
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -68,6 +72,7 @@ export default function PanelPage() {
         <ConfirmarCostoInApp
           solicitud={solicitudActual}
           onConfirmar={confirmarCosto}
+          onCerrar={() => setDismissedCosto(true)}
         />
       )}
       <header className="bg-gradient-to-r from-blue-800 to-indigo-700 text-white sticky top-0 z-10 shadow-lg">
