@@ -34,6 +34,10 @@ export default function LoginPage() {
     return () => ac.abort();
   }, [paso]);
   useEffect(() => {
+    if (otpCompleto && paso === "otp" && !loading) verificarOTP(otp.join(""));
+  }, [otpCompleto]);
+
+  useEffect(() => {
     if (countdown <= 0) return;
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
